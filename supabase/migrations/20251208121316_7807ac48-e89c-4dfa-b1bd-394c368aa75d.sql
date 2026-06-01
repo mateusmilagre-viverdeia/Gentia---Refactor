@@ -1,0 +1,1 @@
+ALTER TABLE companies ADD COLUMN revenue_last_12_months NUMERIC;

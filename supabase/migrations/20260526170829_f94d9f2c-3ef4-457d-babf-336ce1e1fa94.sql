@@ -1,0 +1,1 @@
+ALTER TABLE public.recruitment_jobs ADD COLUMN IF NOT EXISTS seniority_target TEXT CHECK (seniority_target IN ('junior','pleno','senior'));

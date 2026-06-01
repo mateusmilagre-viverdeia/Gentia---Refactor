@@ -1,0 +1,1 @@
+ALTER TABLE public.candidate_disc_responses ADD CONSTRAINT candidate_disc_responses_session_question_unique UNIQUE (session_id, question_id);

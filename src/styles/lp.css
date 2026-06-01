@@ -1,0 +1,220 @@
+/* Landing page scoped tokens — isolated from app theme via .lp-root */
+
+.lp-root {
+  --lp-bg: #0a1020;
+  --lp-surface: #0f1830;
+  --lp-surface-2: #15203d;
+  --lp-surface-3: #1a2647;
+  --lp-border: #1e2a4a;
+  --lp-border-strong: #2a3a64;
+  --lp-fg: #f4f5f7;
+  --lp-muted: #8a93a8;
+  --lp-muted-2: #5e6a85;
+  --lp-green: #22c55e;
+  --lp-blue: #5e6ad2;
+  --lp-amber: #f5b942;
+
+  background: var(--lp-bg);
+  color: var(--lp-fg);
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-feature-settings: "ss01", "cv11";
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+.lp-root .lp-display {
+  font-family: "Inter Tight", system-ui, sans-serif;
+  letter-spacing: -0.035em;
+  font-weight: 500;
+  line-height: 0.98;
+}
+
+.lp-root .lp-serif-italic {
+  font-family: "Instrument Serif", Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.lp-root .lp-mono {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 11px;
+  color: var(--lp-muted);
+}
+
+.lp-root .lp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 6px 12px;
+  border: 1px solid var(--lp-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.02);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--lp-muted);
+}
+
+.lp-root .lp-chip-dot::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--lp-green);
+  box-shadow: 0 0 12px var(--lp-green);
+}
+
+.lp-root .lp-card {
+  background: var(--lp-surface);
+  border: 1px solid var(--lp-border);
+  border-radius: 14px;
+}
+
+.lp-root .lp-card-2 {
+  background: var(--lp-surface-2);
+  border: 1px solid var(--lp-border);
+  border-radius: 12px;
+}
+
+.lp-root .lp-btn-primary {
+  background: #f7f8f8;
+  color: #0a1020;
+  padding: 14px 22px;
+  border-radius: 999px;
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: -0.01em;
+  transition: transform 0.15s ease, background 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lp-root .lp-btn-primary:hover {
+  background: #ffffff;
+  transform: translateY(-1px);
+}
+
+.lp-root .lp-btn-ghost {
+  color: var(--lp-fg);
+  padding: 14px 8px;
+  font-weight: 400;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.15s;
+}
+
+.lp-root .lp-btn-ghost:hover {
+  color: var(--lp-muted);
+}
+
+.lp-root .lp-link {
+  color: var(--lp-fg);
+  border-bottom: 1px solid var(--lp-border-strong);
+  padding-bottom: 1px;
+  transition: border-color 0.15s;
+}
+
+.lp-root .lp-link:hover {
+  border-bottom-color: var(--lp-fg);
+}
+
+.lp-root .lp-divider {
+  height: 1px;
+  background: var(--lp-border);
+}
+
+.lp-root .lp-section {
+  border-top: 1px solid var(--lp-border);
+}
+
+.lp-root .lp-grid-bg {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 80px 80px;
+}
+
+.lp-root .lp-pulse-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.12);
+  color: var(--lp-green);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.lp-root .lp-pulse-live::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--lp-green);
+  animation: lp-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes lp-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.4); }
+}
+
+.lp-root .lp-metric-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border: 1px solid var(--lp-border);
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.04);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--lp-fg);
+}
+
+.lp-root .lp-metric-pill::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--lp-green);
+}
+
+.lp-root .lp-h1 {
+  font-size: clamp(44px, 7.2vw, 96px);
+}
+
+.lp-root .lp-h2 {
+  font-size: clamp(32px, 4.6vw, 60px);
+}
+
+.lp-root .lp-h3 {
+  font-size: clamp(22px, 2.4vw, 32px);
+}
+
+.lp-root .lp-fade-up {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: lp-fade-up 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+
+@keyframes lp-fade-up {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.lp-root .lp-noise {
+  background-image: radial-gradient(circle at 20% 10%, rgba(94, 106, 210, 0.08), transparent 40%),
+                    radial-gradient(circle at 80% 60%, rgba(34, 197, 94, 0.04), transparent 50%);
+}

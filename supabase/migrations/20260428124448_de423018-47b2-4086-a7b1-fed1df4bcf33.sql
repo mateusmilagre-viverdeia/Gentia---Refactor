@@ -1,0 +1,2 @@
+ALTER TABLE public.chrome_extension_captures ADD COLUMN IF NOT EXISTS is_demo BOOLEAN NOT NULL DEFAULT false;
+CREATE INDEX IF NOT EXISTS idx_chrome_extension_captures_is_demo ON public.chrome_extension_captures(is_demo) WHERE is_demo = true;

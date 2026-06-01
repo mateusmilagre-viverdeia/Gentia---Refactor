@@ -1,0 +1,392 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@media print {
+  /* Hide sidebar using specific data attributes only */
+  [data-sidebar="true"] {
+    display: none !important;
+    width: 0 !important;
+  }
+
+  /* Hide topbar */
+  [data-topbar="true"] {
+    display: none !important;
+  }
+
+  /* Hide specific elements marked for print hiding */
+  .print-hidden,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Hide dialog backdrop and content for PDF export */
+  [role="dialog"],
+  [data-radix-dialog-overlay],
+  .fixed.inset-0 {
+    display: none !important;
+  }
+
+  /* Show PDF print area */
+  .pdf-print-area {
+    display: block !important;
+    visibility: visible !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  .pdf-print-area * {
+    visibility: visible !important;
+  }
+
+  /* PDF page breaks */
+  .pdf-page-break {
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .pdf-slide {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .pdf-slide-print {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Content takes full width */
+  main {
+    margin: 0 !important;
+    padding: 20px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .print-full-width {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Clean white background */
+  body {
+    background: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Cards without shadow for clean printing */
+  .card {
+    box-shadow: none !important;
+    border: 1px solid #e5e5e5 !important;
+  }
+
+  /* Prevent page breaks inside sections */
+  .vision-card {
+    break-inside: avoid;
+  }
+
+  /* Flex container adjustments */
+  .min-h-screen.flex {
+    display: block !important;
+  }
+
+  .flex-1.flex.flex-col {
+    width: 100% !important;
+  }
+
+  /* Print watermark footer - appears on every page */
+  .print-watermark {
+    display: block !important;
+    position: fixed;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 10px;
+    color: #999;
+    opacity: 0.6;
+  }
+
+  .print-watermark img {
+    height: 20px;
+    opacity: 0.5;
+    margin-bottom: 4px;
+  }
+}
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Fundo com tom sutil de cinza quente */
+    --background: 40 20% 99%;
+    --foreground: 220 20% 16%;
+
+    /* Cards com contraste sutil */
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 16%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 16%;
+
+    /* Primary mais elegante - tom de grafite */
+    --primary: 220 14% 18%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secundário com tom warm */
+    --secondary: 40 15% 96%;
+    --secondary-foreground: 220 20% 16%;
+
+    /* Muted mais sutil */
+    --muted: 40 12% 95%;
+    --muted-foreground: 220 10% 46%;
+
+    /* Accent suave */
+    --accent: 40 12% 95%;
+    --accent-foreground: 220 20% 16%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Bordas quase invisíveis */
+    --border: 220 10% 92%;
+    --input: 220 10% 94%;
+    --ring: 220 14% 18%;
+
+    /* Radius mais suave */
+    --radius: 0.5rem;
+
+    /* Sidebar refinada */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 20% 16%;
+    --sidebar-primary: 220 14% 18%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 40 12% 96%;
+    --sidebar-accent-foreground: 220 20% 16%;
+    --sidebar-border: 220 10% 94%;
+    --sidebar-ring: 220 14% 18%;
+    
+    --sidebar-active: 40 12% 96%;
+
+    /* Charts sofisticados */
+    --chart-1: 24 85% 55%;
+    --chart-2: 330 55% 58%;
+    --chart-3: 215 60% 52%;
+    --chart-4: 142 60% 42%;
+    --chart-5: 84 50% 48%;
+  }
+
+  .dark {
+    /* Dark mode premium - tons elegantes */
+    --background: 220 18% 7%;
+    --foreground: 40 10% 94%;
+
+    /* Cards escuros */
+    --card: 220 16% 10%;
+    --card-foreground: 40 10% 94%;
+
+    --popover: 220 16% 10%;
+    --popover-foreground: 40 10% 94%;
+
+    /* Primary invertido */
+    --primary: 40 12% 92%;
+    --primary-foreground: 220 18% 7%;
+
+    /* Secundário escuro */
+    --secondary: 220 14% 14%;
+    --secondary-foreground: 40 10% 88%;
+
+    /* Muted escuro */
+    --muted: 220 14% 13%;
+    --muted-foreground: 220 10% 54%;
+
+    /* Accent escuro */
+    --accent: 220 14% 15%;
+    --accent-foreground: 40 10% 94%;
+
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Bordas escuras */
+    --border: 220 14% 18%;
+    --input: 220 14% 14%;
+    --ring: 40 12% 80%;
+
+    /* Sidebar dark */
+    --sidebar-background: 220 16% 8%;
+    --sidebar-foreground: 40 10% 88%;
+    --sidebar-primary: 40 12% 92%;
+    --sidebar-primary-foreground: 220 18% 7%;
+    --sidebar-accent: 220 14% 13%;
+    --sidebar-accent-foreground: 40 10% 88%;
+    --sidebar-border: 220 14% 15%;
+    --sidebar-ring: 40 12% 80%;
+    
+    --sidebar-active: 220 14% 14%;
+
+    /* Charts dark */
+    --chart-1: 24 75% 50%;
+    --chart-2: 330 50% 55%;
+    --chart-3: 215 55% 48%;
+    --chart-4: 142 55% 38%;
+    --chart-5: 84 45% 44%;
+  }
+}
+
+@layer utilities {
+  /* Texto premium */
+  .text-premium {
+    @apply font-light tracking-tight;
+  }
+  
+  /* Heading refinado */
+  .heading-premium {
+    @apply font-semibold tracking-tight text-foreground;
+  }
+  
+  /* Subheading elegante */
+  .subheading-premium {
+    @apply text-sm font-normal text-muted-foreground;
+  }
+  
+  /* Hover suave com elevação */
+  .hover-lift {
+    @apply transition-all duration-300 hover:-translate-y-0.5;
+    &:hover {
+      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    }
+  }
+  
+  .dark .hover-lift:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  }
+  
+  /* Hover com glow suave */
+  .hover-glow {
+    @apply transition-shadow duration-300;
+    &:hover {
+      box-shadow: 0 0 20px hsl(var(--primary) / 0.06);
+    }
+  }
+  
+  /* Hover com scale sutil */
+  .hover-scale {
+    @apply transition-transform duration-300 hover:scale-[1.01];
+  }
+  
+  /* Glassmorphism sutil */
+  .glass {
+    @apply bg-white/80 backdrop-blur-sm border border-white/20;
+  }
+  
+  .dark .glass {
+    @apply bg-black/40 backdrop-blur-sm border border-white/10;
+  }
+  
+  /* Gradiente sutil */
+  .gradient-subtle {
+    @apply bg-gradient-to-b from-background to-muted/20;
+  }
+  
+  /* Sombra premium */
+  .shadow-premium {
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 2px 8px rgba(0,0,0,0.02);
+  }
+  
+  .dark .shadow-premium {
+    box-shadow: 0 1px 2px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.15);
+  }
+  
+  /* Sombra hover */
+  .shadow-premium-hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.03);
+  }
+  
+  .dark .shadow-premium-hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.2);
+  }
+  
+  /* Card com borda lateral colorida (para destaque sutil) */
+  .accent-border-left {
+    @apply border-l-[3px] bg-card;
+  }
+  
+  /* Status colors sutis - apenas borda */
+  .status-success {
+    @apply border-l-emerald-500/70;
+  }
+  
+  .status-warning {
+    @apply border-l-amber-500/70;
+  }
+  
+  .status-error {
+    @apply border-l-red-500/70;
+  }
+  
+  .status-info {
+    @apply border-l-blue-500/70;
+  }
+  
+  .status-purple {
+    @apply border-l-purple-500/70;
+  }
+  
+  /* Card premium clean */
+  .card-premium {
+    @apply rounded-xl border border-border/50 bg-card shadow-premium transition-all duration-300;
+    &:hover {
+      @apply shadow-premium-hover;
+    }
+  }
+  
+  /* Stat card refinado */
+  .stat-card {
+    @apply p-4 rounded-xl bg-card border border-border/40 transition-all duration-300;
+    &:hover {
+      @apply border-border/60;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+  }
+  
+  .dark .stat-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  
+  /* Icon container elegante */
+  .icon-container {
+    @apply flex items-center justify-center rounded-lg p-2 transition-colors duration-200;
+  }
+  
+  .icon-container-sm {
+    @apply flex items-center justify-center rounded-md p-1.5;
+  }
+}
+
+/* Transição suave global para mudança de tema */
+html.transitioning,
+html.transitioning *,
+html.transitioning *::before,
+html.transitioning *::after {
+  transition: background-color 0.3s ease, 
+              border-color 0.3s ease, 
+              color 0.2s ease,
+              fill 0.2s ease,
+              stroke 0.2s ease !important;
+  transition-delay: 0s !important;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}

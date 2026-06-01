@@ -1,0 +1,1 @@
+ALTER TABLE public.job_descriptions ADD COLUMN ideal_disc_profile jsonb DEFAULT null;

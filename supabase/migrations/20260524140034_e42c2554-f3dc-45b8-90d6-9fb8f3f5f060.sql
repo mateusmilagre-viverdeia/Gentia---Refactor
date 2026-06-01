@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.audit_overbilled_interviews(boolean, timestamptz) TO authenticated;

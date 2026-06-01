@@ -1,0 +1,1 @@
+ALTER TABLE public.process_roi_reports ALTER COLUMN client_id DROP NOT NULL;

@@ -1,0 +1,1 @@
+ALTER TABLE public.implementation_plans ADD COLUMN project_duration INTEGER;

@@ -1,0 +1,152 @@
+{
+  "industria": {
+    "financeira": [
+      "Faturamento Anual",
+      "EBITDA (%)",
+      "Margem de Lucro Líquido",
+      "ROI (Retorno sobre Investimento)",
+      "ROE (Retorno sobre Patrimônio)",
+      "Fluxo de Caixa Operacional",
+      "Margem de Contribuição Global",
+      "Valor da Empresa (Enterprise Value)",
+      "ROIC (Retorno sobre Capital Investido)",
+      "Receita por Segmento de Mercado"
+    ],
+    "clientes": [
+      "NPS (Net Promoter Score)",
+      "Market Share",
+      "Taxa de Retenção de Clientes",
+      "CSAT (Satisfação Geral)",
+      "Índice de Reclamações Críticas",
+      "Taxa de Recompra",
+      "NRR (Net Revenue Retention)",
+      "Expansão de Receita (Clientes Atuais)",
+      "Brand Equity Score",
+      "Lifetime Value Médio"
+    ],
+    "processos": [
+      "OEE (Overall Equipment Effectiveness)",
+      "Produtividade Global (Unidades/Colaborador)",
+      "Taxa de Inovação (% Receita de Novos Produtos)",
+      "Lead Time Total (Pedido até Entrega)",
+      "Acurácia de Planejamento (S&OP)",
+      "Taxa de Conversão de Oportunidades",
+      "Ciclo de Desenvolvimento de Produtos",
+      "Eficiência Energética (Custo/Unidade)",
+      "Taxa de Utilização de Capacidade",
+      "Índice de Qualidade Total (Refugo + Devoluções)"
+    ],
+    "aprendizado": [
+      "E-NPS (Employee Net Promoter Score)",
+      "Clima Organizacional",
+      "Taxa de Rotatividade (Turnover)",
+      "Sucessão Mapeada (Posições Críticas)",
+      "Índice de Capacitação Estratégica",
+      "Investimento em Inovação (% Receita)",
+      "Taxa de Promoções Internas",
+      "Diversidade em Liderança",
+      "Engajamento dos Colaboradores",
+      "Índice de Maturidade Digital"
+    ]
+  },
+  "servicos": {
+    "financeira": [
+      "MRR/ARR (Receita Recorrente)",
+      "EBITDA (%)",
+      "Margem de Lucro Líquido",
+      "LTV (Lifetime Value Médio)",
+      "Razão LTV/CAC",
+      "Fluxo de Caixa Operacional",
+      "Receita por Colaborador",
+      "Margem de Contribuição por Serviço",
+      "ROI de Portfólio de Serviços",
+      "Payback Médio do Cliente"
+    ],
+    "clientes": [
+      "NPS (Net Promoter Score)",
+      "Churn Rate (Taxa de Cancelamento)",
+      "CSAT (Satisfação Geral)",
+      "NRR (Net Revenue Retention)",
+      "Taxa de Renovação",
+      "Upsell Rate",
+      "Expansão de Receita (Base Atual)",
+      "Taxa de Recompra",
+      "Share of Wallet",
+      "Índice de Reclamações Estratégicas"
+    ],
+    "processos": [
+      "Taxa de Conversão (Lead → Cliente)",
+      "CAC (Custo de Aquisição de Cliente)",
+      "Produtividade (Receita/Colaborador)",
+      "SLA Cumprimento Global",
+      "MQL (Marketing Qualified Leads)",
+      "Tempo de Ciclo de Vendas",
+      "Taxa de Automação de Processos",
+      "Acurácia de Forecast",
+      "ROAS (Retorno sobre Investimento em Marketing)",
+      "Eficiência Operacional (Custo/Receita)"
+    ],
+    "aprendizado": [
+      "E-NPS (Employee Net Promoter Score)",
+      "Clima Organizacional",
+      "Taxa de Rotatividade (Turnover)",
+      "Índice de Capacitação Técnica",
+      "Sucessão de Posições-Chave Mapeada",
+      "Investimento em Tecnologia (% Receita)",
+      "Taxa de Promoções Internas",
+      "Engajamento dos Colaboradores",
+      "Índice de Inovação em Serviços",
+      "Maturidade em Gestão de Conhecimento"
+    ]
+  },
+  "produto": {
+    "financeira": [
+      "Faturamento Total",
+      "Margem Bruta",
+      "EBITDA (%)",
+      "ROI",
+      "Fluxo de Caixa Operacional",
+      "Vendas por m² (Same Store Sales)",
+      "Margem de Contribuição por Categoria",
+      "Giro de Estoque Global",
+      "GMROI (Gross Margin Return on Investment)",
+      "Ticket Médio"
+    ],
+    "clientes": [
+      "NPS (Net Promoter Score)",
+      "CSAT (Satisfação Geral)",
+      "Taxa de Recompra",
+      "Frequência de Compra",
+      "Taxa de Fidelização",
+      "NRR (Net Revenue Retention)",
+      "Expansão de Receita por Cliente",
+      "Upsell/Cross-sell Rate",
+      "Índice de Reclamações Críticas",
+      "Brand Awareness"
+    ],
+    "processos": [
+      "Taxa de Conversão (Tráfego → Venda)",
+      "Produtividade (Vendas/Colaborador)",
+      "CAC (Custo de Aquisição de Cliente)",
+      "LTV (Lifetime Value)",
+      "ROAS (Retorno sobre Investimento em Marketing)",
+      "Acurácia de Previsão de Demanda",
+      "Ruptura de Estoque (Out of Stock)",
+      "Giro por Categoria Estratégica",
+      "Omnichannel Conversion Rate",
+      "Eficiência Logística (Custo/Receita)"
+    ],
+    "aprendizado": [
+      "E-NPS (Employee Net Promoter Score)",
+      "Clima Organizacional",
+      "Taxa de Rotatividade (Turnover)",
+      "Produtividade de Vendas (Meta Atingida)",
+      "Índice de Capacitação em Vendas",
+      "Taxa de Promoções Internas",
+      "Engajamento dos Colaboradores",
+      "Sucessão Mapeada (Gerências)",
+      "Investimento em Tecnologia de Vendas",
+      "Maturidade em Customer Experience"
+    ]
+  }
+}

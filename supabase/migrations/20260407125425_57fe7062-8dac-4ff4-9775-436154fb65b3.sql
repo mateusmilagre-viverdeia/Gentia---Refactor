@@ -1,0 +1,1 @@
+ALTER TABLE public.job_icps ADD COLUMN IF NOT EXISTS title_variations text[] DEFAULT '{}';

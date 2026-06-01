@@ -1,0 +1,1 @@
+DELETE FROM recruitment_communications_log WHERE candidate_id = '1cb896b4-592d-49a4-8b4d-122e48b61396' AND job_id = 'a502af02-7ef0-4dd5-8dfe-e5975ceb2742' AND metadata::text LIKE '%orchestrator_action_hash%orchestrator_1cb896b4%disc%';

@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.add_credits(uuid, text, integer, text, text, uuid, jsonb);

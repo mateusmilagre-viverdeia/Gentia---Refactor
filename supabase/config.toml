@@ -1,0 +1,289 @@
+project_id = "axumduklmiiptumdsgtu"
+
+[functions]
+  [functions.accept-ep-invite]
+    verify_jwt = false
+  [functions.accept-invite-with-signup]
+    verify_jwt = false
+  [functions.admin-list-pending-invites]
+    verify_jwt = true
+  [functions.admin-release-invites-bulk]
+    verify_jwt = true
+  [functions.admin-reset-password]
+    verify_jwt = false
+  [functions.aggregate-culture-metrics]
+    verify_jwt = false
+  [functions.aggregate-pulse-metrics]
+    verify_jwt = true
+  [functions.ai-generate-questions]
+    verify_jwt = true
+  [functions.analyze-disc]
+    verify_jwt = true
+  [functions.analyze-mission]
+    verify_jwt = true
+  [functions.analyze-pulse-metrics]
+    verify_jwt = true
+  [functions.analyze-social-profile]
+    verify_jwt = true
+  [functions.analyze-team-maturity]
+    verify_jwt = true
+  [functions.analyze-unique-ability]
+    verify_jwt = true
+  [functions.apify-instagram]
+    verify_jwt = true
+  [functions.apify-linkedin]
+    verify_jwt = true
+  [functions.approve-invite]
+    verify_jwt = false
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.auto-accept-pending-invite]
+    verify_jwt = false
+  [functions.calculate-job-attractiveness]
+    verify_jwt = true
+  [functions.calculate-royalties]
+    verify_jwt = false
+  [functions.calculate-seats-increase]
+    verify_jwt = true
+  [functions.calculate-seats-price]
+    verify_jwt = true
+  [functions.calculate-seats-reduction]
+    verify_jwt = true
+  [functions.check-achievements]
+    verify_jwt = true
+  [functions.check-company-duplicates]
+    verify_jwt = true
+  [functions.check-email-domain-organization]
+    verify_jwt = false
+  [functions.check-invite-status]
+    verify_jwt = false
+  [functions.check-pending-invite]
+    verify_jwt = false
+  [functions.check-pulse-participation-alerts]
+    verify_jwt = false
+  [functions.claim-pregrant]
+    verify_jwt = false
+  [functions.close-job-posting]
+    verify_jwt = true
+  [functions.compile-decision]
+    verify_jwt = true
+  [functions.create-invite-with-payment]
+    verify_jwt = true
+  [functions.create-seats-checkout]
+    verify_jwt = true
+  [functions.create-seats-increase-portal]
+    verify_jwt = true
+  [functions.create-seats-reduction-portal]
+    verify_jwt = true
+  [functions.create-support-ticket]
+    verify_jwt = true
+  [functions.cron-generate-daily-pulses]
+    verify_jwt = false
+  [functions.culture-interview-chat]
+    verify_jwt = true
+  [functions.culture-interview-complete]
+    verify_jwt = false
+  [functions.disc-token-revalidate]
+    verify_jwt = false
+  [functions.expire-trials]
+    verify_jwt = false
+  [functions.firecrawl-scrape]
+    verify_jwt = false
+  [functions.firecrawl-search]
+    verify_jwt = false
+  [functions.generate-behaviors]
+    verify_jwt = true
+  [functions.generate-culture-code-slides]
+    verify_jwt = true
+  [functions.generate-culture-code-structure]
+    verify_jwt = true
+  [functions.generate-culture-pulse-questions]
+    verify_jwt = true
+  [functions.generate-daily-pulse]
+    verify_jwt = true
+  [functions.generate-embedding]
+    verify_jwt = true
+  [functions.generate-event-suggestions]
+    verify_jwt = true
+  [functions.generate-job-icp]
+    verify_jwt = true
+  [functions.generate-market-research]
+    verify_jwt = true
+  [functions.market-research-public]
+    verify_jwt = false
+  [functions.generate-mission]
+    verify_jwt = true
+  [functions.generate-preferences-token]
+    verify_jwt = false
+  [functions.generate-project-recommendations]
+    verify_jwt = true
+  [functions.generate-proposal]
+    verify_jwt = true
+  [functions.generate-ritual-suggestions]
+    verify_jwt = true
+  [functions.generate-roip-analysis]
+    verify_jwt = true
+  [functions.generate-roip-evolution-analysis]
+    verify_jwt = true
+  [functions.generate-selling-company]
+    verify_jwt = true
+  [functions.generate-values-questions]
+    verify_jwt = true
+  [functions.generate-vision]
+    verify_jwt = true
+  [functions.grant-org-seats]
+    verify_jwt = true
+  [functions.handle-access-request]
+    verify_jwt = true
+  [functions.hash-api-key]
+    verify_jwt = true
+  [functions.help-assistant]
+    verify_jwt = false
+  [functions.hunting-bulk-import]
+    verify_jwt = true
+  [functions.hunting-generate-approach]
+    verify_jwt = true
+  [functions.hunting-scrape-profile]
+    verify_jwt = true
+  [functions.hunting-search-candidates]
+    verify_jwt = true
+  [functions.import-culture-pdf]
+    verify_jwt = true
+  [functions.job-benchmark-search]
+    verify_jwt = true
+  [functions.jobs-xml-feed]
+    verify_jwt = false
+  [functions.list-invoices]
+    verify_jwt = true
+  [functions.match-candidate-jobs]
+    verify_jwt = true
+  [functions.notify-consultant-reminders]
+    verify_jwt = false
+  [functions.notify-final-evaluation]
+    verify_jwt = false
+  [functions.openai-realtime-session]
+    verify_jwt = false
+  [functions.outreach-campaign-start]
+    verify_jwt = true
+  [functions.outreach-generate-reply]
+    verify_jwt = true
+  [functions.outreach-queue-processor]
+    verify_jwt = false
+  [functions.outreach-webhook-receiver]
+    verify_jwt = false
+  [functions.inbound-outreach-email]
+    verify_jwt = false
+  [functions.send-outreach-email]
+    verify_jwt = true
+  [functions.portal-reminder-48h]
+    verify_jwt = false
+  [functions.post-job-to-channel]
+    verify_jwt = true
+  [functions.process-billing-reminders]
+    verify_jwt = false
+  [functions.process-email-queue]
+    verify_jwt = true
+  [functions.process-survey-schedules]
+    verify_jwt = false
+  [functions.process-workflow-notifications]
+    verify_jwt = false
+  [functions.recruitment-metric-alerts]
+    verify_jwt = false
+  [functions.recruitment-notification-jobs]
+    verify_jwt = false
+  [functions.recruitment-orchestrator]
+    verify_jwt = false
+  [functions.reduce-subscription-seats]
+    verify_jwt = true
+  [functions.refine-selling-company]
+    verify_jwt = true
+  [functions.refine-statement]
+    verify_jwt = true
+  [functions.regenerate-single-slide]
+    verify_jwt = true
+  [functions.request-org-access]
+    verify_jwt = true
+  [functions.run-notification-jobs]
+    verify_jwt = false
+  [functions.semantic-search-candidates]
+    verify_jwt = true
+  [functions.send-bulk-invites]
+    verify_jwt = true
+  [functions.send-ep-invite]
+    verify_jwt = true
+  [functions.send-interview-invite]
+    verify_jwt = true
+  [functions.send-notification-email]
+    verify_jwt = false
+  [functions.send-offboarding-survey]
+    verify_jwt = true
+  [functions.send-rejection-email]
+    verify_jwt = true
+  [functions.send-rejection-whatsapp]
+    verify_jwt = false
+  [functions.send-talent-pool-notification]
+    verify_jwt = false
+  [functions.send-team-invite]
+    verify_jwt = false
+  [functions.send-technical-invitation]
+    verify_jwt = false
+  [functions.send-technical-reminders]
+    verify_jwt = false
+  [functions.send-welcome-email]
+    verify_jwt = false
+  [functions.sla-monitor]
+    verify_jwt = false
+  [functions.start-culture-session]
+    verify_jwt = false
+  [functions.start-technical-session]
+    verify_jwt = false
+  [functions.stripe-billing-portal]
+    verify_jwt = true
+  [functions.stripe-checkout]
+    verify_jwt = true
+  [functions.stripe-reconcile]
+    verify_jwt = true
+  [functions.stripe-setup-webhook]
+    verify_jwt = true
+  [functions.stripe-webhooks]
+    verify_jwt = false
+  [functions.suggest-job-description]
+    verify_jwt = true
+  [functions.suggest-keywords]
+    verify_jwt = true
+  [functions.talent-pool-analytics]
+    verify_jwt = false
+  [functions.technical-interview-complete]
+    verify_jwt = false
+  [functions.technical-interview-session]
+    verify_jwt = false
+  [functions.technical-interview-upload-audio]
+    verify_jwt = false
+  [functions.test-recruitment-notification]
+    verify_jwt = true
+  [functions.update-candidate-preferences]
+    verify_jwt = false
+  [functions.update-subscription-seats]
+    verify_jwt = true
+  [functions.validate-distribution-credentials]
+    verify_jwt = true
+  [functions.validate-interview-session]
+    verify_jwt = false
+  [functions.validate-invite]
+    verify_jwt = false
+  [functions.validate-technical-session]
+    verify_jwt = false
+  [functions.verify-profile-consistency]
+    verify_jwt = false
+  [functions.verify-subscription-status]
+    verify_jwt = false
+  [functions.extension-capture-profile]
+    verify_jwt = false
+  [functions.generate-indeed-feed]
+    verify_jwt = false
+  [functions.indeed-feed-public]
+    verify_jwt = false
+  [functions.log-interview-event]
+    verify_jwt = false
+  [functions.mark-interview-failed]
+    verify_jwt = false

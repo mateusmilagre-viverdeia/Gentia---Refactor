@@ -1,0 +1,2 @@
+ALTER TABLE public.ai_prompts ADD COLUMN IF NOT EXISTS model text NULL;
+COMMENT ON COLUMN public.ai_prompts.model IS 'Optional Realtime model override for voice prompts (e.g. gpt-realtime, gpt-realtime-mini). NULL = use edge function default.';

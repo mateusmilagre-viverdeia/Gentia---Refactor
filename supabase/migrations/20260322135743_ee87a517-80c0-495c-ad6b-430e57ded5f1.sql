@@ -1,0 +1,1 @@
+ALTER TABLE public.ritual_sessions ADD COLUMN IF NOT EXISTS approved_rituals jsonb DEFAULT NULL;

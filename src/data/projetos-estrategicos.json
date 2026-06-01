@@ -1,0 +1,152 @@
+{
+  "industria": {
+    "financial": [
+      { "id": "ind-fin-1", "name": "Programa de Redução de Custos Industriais" },
+      { "id": "ind-fin-2", "name": "Implementação de Centro de Serviços Compartilhados (CSC)" },
+      { "id": "ind-fin-3", "name": "Reestruturação do Portfólio de Produtos" },
+      { "id": "ind-fin-4", "name": "Otimização da Estrutura de Capital" },
+      { "id": "ind-fin-5", "name": "Programa de Melhoria de Margens por Linha" },
+      { "id": "ind-fin-6", "name": "Implementação de FP&A (Financial Planning & Analysis)" },
+      { "id": "ind-fin-7", "name": "Projeto de Precificação Estratégica" },
+      { "id": "ind-fin-8", "name": "Diversificação de Mercados/Canais" },
+      { "id": "ind-fin-9", "name": "Revisão de Investimentos e CAPEX" },
+      { "id": "ind-fin-10", "name": "Programa de Eficiência Energética" }
+    ],
+    "customer": [
+      { "id": "ind-cli-1", "name": "Programa de Voz do Cliente (Voice of Customer)" },
+      { "id": "ind-cli-2", "name": "Implementação de CRM Industrial" },
+      { "id": "ind-cli-3", "name": "Desenvolvimento de Soluções Customizadas" },
+      { "id": "ind-cli-4", "name": "Programa de Qualidade Assegurada" },
+      { "id": "ind-cli-5", "name": "Criação de Portal do Cliente" },
+      { "id": "ind-cli-6", "name": "Certificações de Qualidade (ISO, etc.)" },
+      { "id": "ind-cli-7", "name": "Programa de Customer Success B2B" },
+      { "id": "ind-cli-8", "name": "Redução de Lead Time de Entrega" },
+      { "id": "ind-cli-9", "name": "Desenvolvimento de Novos Serviços Agregados" },
+      { "id": "ind-cli-10", "name": "Programa de Co-criação com Clientes" }
+    ],
+    "process": [
+      { "id": "ind-pro-1", "name": "Implementação de TPM (Total Productive Maintenance)" },
+      { "id": "ind-pro-2", "name": "Programa de Manufatura Enxuta (Lean Manufacturing)" },
+      { "id": "ind-pro-3", "name": "Implementação de Indústria 4.0 / IoT" },
+      { "id": "ind-pro-4", "name": "Projeto de Automação Industrial" },
+      { "id": "ind-pro-5", "name": "Implementação de S&OP Integrado" },
+      { "id": "ind-pro-6", "name": "Sistema MES (Manufacturing Execution System)" },
+      { "id": "ind-pro-7", "name": "Programa Seis Sigma / Melhoria Contínua" },
+      { "id": "ind-pro-8", "name": "Digitalização da Cadeia de Suprimentos" },
+      { "id": "ind-pro-9", "name": "Implementação de Manutenção Preditiva" },
+      { "id": "ind-pro-10", "name": "Projeto de Logística Integrada" }
+    ],
+    "people": [
+      { "id": "ind-pes-1", "name": "Academia Corporativa Técnica" },
+      { "id": "ind-pes-2", "name": "Programa de Desenvolvimento de Líderes" },
+      { "id": "ind-pes-3", "name": "Implementação de Gestão por Competências" },
+      { "id": "ind-pes-4", "name": "Programa de Sucessão para Posições Críticas" },
+      { "id": "ind-pes-5", "name": "Cultura de Segurança e Zero Acidentes" },
+      { "id": "ind-pes-6", "name": "Programa de Inovação e Ideias" },
+      { "id": "ind-pes-7", "name": "Centro de Excelência Operacional" },
+      { "id": "ind-pes-8", "name": "Plano de Carreira Técnica (Y)" },
+      { "id": "ind-pes-9", "name": "Programa de Retenção de Talentos" },
+      { "id": "ind-pes-10", "name": "Transformação Cultural (Lean Culture)" }
+    ]
+  },
+  "servicos": {
+    "financial": [
+      { "id": "srv-fin-1", "name": "Programa de Otimização de Preços" },
+      { "id": "srv-fin-2", "name": "Implementação de Modelo de Receita Recorrente" },
+      { "id": "srv-fin-3", "name": "Projeto de Upsell e Cross-sell Estruturado" },
+      { "id": "srv-fin-4", "name": "Reestruturação de Portfólio de Serviços" },
+      { "id": "srv-fin-5", "name": "Implementação de BI Financeiro" },
+      { "id": "srv-fin-6", "name": "Programa de Redução de CAC" },
+      { "id": "srv-fin-7", "name": "Otimização de Estrutura de Custos" },
+      { "id": "srv-fin-8", "name": "Modelo de Precificação Baseada em Valor" },
+      { "id": "srv-fin-9", "name": "Programa de Maximização de LTV" },
+      { "id": "srv-fin-10", "name": "Implementação de Revenue Operations" }
+    ],
+    "customer": [
+      { "id": "srv-cli-1", "name": "Programa de Customer Success" },
+      { "id": "srv-cli-2", "name": "Implementação de CRM Avançado" },
+      { "id": "srv-cli-3", "name": "Estratégia de Redução de Churn" },
+      { "id": "srv-cli-4", "name": "Programa de Experiência do Cliente (CX)" },
+      { "id": "srv-cli-5", "name": "Pesquisas Estruturadas de NPS" },
+      { "id": "srv-cli-6", "name": "Criação de Comunidade de Clientes" },
+      { "id": "srv-cli-7", "name": "Programa de Advocacy e Referências" },
+      { "id": "srv-cli-8", "name": "Portal de Autoatendimento" },
+      { "id": "srv-cli-9", "name": "Jornada do Cliente Mapeada e Otimizada" },
+      { "id": "srv-cli-10", "name": "Programa de Onboarding de Clientes" }
+    ],
+    "process": [
+      { "id": "srv-pro-1", "name": "Implementação de Marketing Automation" },
+      { "id": "srv-pro-2", "name": "Funil de Vendas Estruturado (Sales Pipeline)" },
+      { "id": "srv-pro-3", "name": "Automação de Processos (RPA)" },
+      { "id": "srv-pro-4", "name": "Implementação de Service Desk / ITSM" },
+      { "id": "srv-pro-5", "name": "Programa de Geração de Demanda (Demand Gen)" },
+      { "id": "srv-pro-6", "name": "Otimização de Conversão de Leads" },
+      { "id": "srv-pro-7", "name": "Implementação de Revenue Operations" },
+      { "id": "srv-pro-8", "name": "Sistema de Business Intelligence" },
+      { "id": "srv-pro-9", "name": "Projeto de Escalabilidade Operacional" },
+      { "id": "srv-pro-10", "name": "Metodologia de Vendas Consultivas" }
+    ],
+    "people": [
+      { "id": "srv-pes-1", "name": "Academia de Vendas e Customer Success" },
+      { "id": "srv-pes-2", "name": "Programa de Desenvolvimento de Líderes" },
+      { "id": "srv-pes-3", "name": "Cultura Data-Driven" },
+      { "id": "srv-pes-4", "name": "Programa de Retenção de Talentos" },
+      { "id": "srv-pes-5", "name": "Plano de Sucessão Estruturado" },
+      { "id": "srv-pes-6", "name": "Programa de Engajamento de Colaboradores" },
+      { "id": "srv-pes-7", "name": "Upskilling em Tecnologias Emergentes" },
+      { "id": "srv-pes-8", "name": "Programa de Inovação em Serviços" },
+      { "id": "srv-pes-9", "name": "Gestão de Performance por OKRs" },
+      { "id": "srv-pes-10", "name": "Clima Organizacional e Pesquisa de Engajamento" }
+    ]
+  },
+  "produto": {
+    "financial": [
+      { "id": "prd-fin-1", "name": "Programa de Gestão por Categoria" },
+      { "id": "prd-fin-2", "name": "Otimização de Mix de Produtos" },
+      { "id": "prd-fin-3", "name": "Projeto de Precificação Dinâmica" },
+      { "id": "prd-fin-4", "name": "Implementação de Retail Analytics" },
+      { "id": "prd-fin-5", "name": "Programa de Redução de Quebras e Perdas" },
+      { "id": "prd-fin-6", "name": "Otimização de Giro de Estoque" },
+      { "id": "prd-fin-7", "name": "Estratégia Omnichannel Integrada" },
+      { "id": "prd-fin-8", "name": "Programa de Margem por Categoria" },
+      { "id": "prd-fin-9", "name": "Revisão de Portfólio e SKUs" },
+      { "id": "prd-fin-10", "name": "Implementação de Trade Marketing" }
+    ],
+    "customer": [
+      { "id": "prd-cli-1", "name": "Programa de Fidelidade e Relacionamento" },
+      { "id": "prd-cli-2", "name": "Estratégia de Customer Experience" },
+      { "id": "prd-cli-3", "name": "Implementação de CRM Varejista" },
+      { "id": "prd-cli-4", "name": "Programa de Personalização" },
+      { "id": "prd-cli-5", "name": "Pesquisa de Satisfação Estruturada (NPS/CSAT)" },
+      { "id": "prd-cli-6", "name": "Atendimento Omnichannel" },
+      { "id": "prd-cli-7", "name": "Programa de Jornada do Cliente" },
+      { "id": "prd-cli-8", "name": "Marketing de Relacionamento e Retenção" },
+      { "id": "prd-cli-9", "name": "Criação de Comunidade de Marca" },
+      { "id": "prd-cli-10", "name": "Programa de Experiência na Loja" }
+    ],
+    "process": [
+      { "id": "prd-pro-1", "name": "Implementação de Sistema Omnichannel" },
+      { "id": "prd-pro-2", "name": "Otimização de Previsão de Demanda (Forecasting)" },
+      { "id": "prd-pro-3", "name": "Sistema de Gestão de Estoque Inteligente" },
+      { "id": "prd-pro-4", "name": "Projeto de Transformação Digital" },
+      { "id": "prd-pro-5", "name": "Implementação de E-commerce" },
+      { "id": "prd-pro-6", "name": "Automação de Marketing" },
+      { "id": "prd-pro-7", "name": "Programa de Visual Merchandising" },
+      { "id": "prd-pro-8", "name": "Otimização de Supply Chain" },
+      { "id": "prd-pro-9", "name": "Implementação de BI e Analytics" },
+      { "id": "prd-pro-10", "name": "Projeto de Conversão e Vendas" }
+    ],
+    "people": [
+      { "id": "prd-pes-1", "name": "Academia de Varejo (Treinamento Vendas)" },
+      { "id": "prd-pes-2", "name": "Programa de Desenvolvimento de Gerentes" },
+      { "id": "prd-pes-3", "name": "Cultura Customer-Centric" },
+      { "id": "prd-pes-4", "name": "Programa de Retenção e Engajamento" },
+      { "id": "prd-pes-5", "name": "Certificação em Atendimento ao Cliente" },
+      { "id": "prd-pes-6", "name": "Plano de Sucessão de Gerências" },
+      { "id": "prd-pes-7", "name": "Programa de Meritocracia e Incentivos" },
+      { "id": "prd-pes-8", "name": "Capacitação Digital para Equipes" },
+      { "id": "prd-pes-9", "name": "Programa de Clima Organizacional" },
+      { "id": "prd-pes-10", "name": "Desenvolvimento de Lideranças de Loja" }
+    ]
+  }
+}

@@ -1,0 +1,3 @@
+ALTER TABLE public.recruitment_cross_match_suggestions
+ADD CONSTRAINT crossmatch_unique_candidate_target
+UNIQUE (source_candidate_id, suggested_job_id);

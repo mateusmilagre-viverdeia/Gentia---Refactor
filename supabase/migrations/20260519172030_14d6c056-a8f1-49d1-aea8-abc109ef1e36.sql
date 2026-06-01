@@ -1,0 +1,2 @@
+ALTER TABLE public.culture_interview_sessions ADD COLUMN IF NOT EXISTS resume_count integer NOT NULL DEFAULT 0;
+ALTER TABLE public.technical_interview_sessions ADD COLUMN IF NOT EXISTS resume_count integer NOT NULL DEFAULT 0;
