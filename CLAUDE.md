@@ -24,7 +24,7 @@ O produto (**Gentia**) foi originalmente construído no **Lovable + Lovable Clou
 
 > Atualizar status conforme avançamos. (`[ ]` pendente · `[~]` em andamento · `[x]` concluído)
 
-- [ ] **Segurança backend**: auditoria de RLS (todas as tabelas), políticas `USING(true)`, uso de `service_role`, validação de JWT em edge functions, exposição de dados sensíveis, secrets vazados.
+- [x] **Segurança backend** (Frente A ✅): RLS em 415/415 tabelas (com policy), vazamento de PII do portal fechado, endpoints públicos auditados (3 de alto risco corrigidos), isolamento multi-tenant provado. Ver §8.5 "Frente A" e `docs/SECURITY_AUDIT.md`. _(Revisão fina de `service_role` por função e auditoria de secrets vazados ocorre no cutover, com os secrets reais.)_
 - [ ] **Performance/queries**: índices, planos de execução, queries pesadas, paginação, N+1, views materializadas.
 - [ ] **Migração Lovable Cloud → Supabase dedicado**: migrar schema (477 migrations), 284 edge functions, secrets, storage, auth, cron jobs; validar paridade.
 - [ ] **Escala/infra**: dimensionar instância, connection pooling (pgbouncer/supavisor), limites, observabilidade.
@@ -164,6 +164,17 @@ Já existe trabalho prévio documentado em [`docs/SECURITY.md`](docs/SECURITY.md
 - **283/283 functions deployadas** no destino via `supabase functions deploy` (bulk; **sem Docker** — bundler nativo). Confirmado via API `GET /v1/projects/<ref>/functions`. (2026-06-02)
 - ⚠️ Deployadas ≠ funcionais: ainda faltam **secrets** (Fase 3) e **dados** (Fase 4) para rodarem de fato.
 
+### Frente A — Segurança ✅ **COMPLETA** (escopo do contrato, sobre dados fake no DESTINO)
+> Execução do entregável "a) Segurança". Auditoria completa em `docs/SECURITY_AUDIT.md`; runbook em `docs/RUNBOOK_INCIDENTES.md`.
+- **RLS**: 415/415 tabelas com RLS habilitado **e** com policy (`rls_sem_policy=0` global).
+- **🔴 Vazamento de PII do portal** corrigido: 10 policies `anon USING(true)` em 8 tabelas removidas (`20260602120000`). Portal público agora só via edge function **`portal-data`** (valida token no servidor, service_role, devolve só os dados daquele cliente). Refatoração do front documentada (auditoria §7) — fora do escopo Fase 1.
+- **🔴** `culture_interview_criteria_evaluations` (`public:ALL`) removido (`20260602130000`); prompts/config de IA sensíveis restringidos a super_admin (`20260602140000`).
+- **🟡** 9 tabelas drift sem policy → policies de SELECT (`20260602150000`).
+- **Endpoints públicos** (`verify_jwt=false`) auditados: 3 de ALTO risco (abuso de custo — `firecrawl-scrape/search`, `help-assistant`) corrigidos com helper `_shared/require-caller.ts`; 3 de risco MÉDIO documentados.
+- **Isolamento multi-tenant PROVADO** (auditoria §9): RLS testada via `set local role authenticated` + `request.jwt.claims` com 2 tenants fake. Leitura **e** escrita isoladas; cross-tenant bloqueado (`ERROR 42501`). Dados de teste removidos.
+- Commits: `176b594`, `e9440f3`, `c265913`, `3b2e833`.
+- ⏳ **Próximas frentes** (ordem técnica): C) Banco/Performance → E) Infra/Escala → F) LLMs (inventário + Anthropic + desacoplar Lovable Gateway) → B) Observabilidade → D) Backup/DR.
+
 ### Conectividade (IMPORTANTE)
 - `psql` DIRECT (`db.<ref>.supabase.co`) tem **DNS/IPv6 intermitente** → para inspeção use a **query API HTTPS**: `POST https://api.supabase.com/v1/projects/<ref>/database/query` (estável). Para migrations, `supabase db push`.
 - pg tools instaladas em `/opt/homebrew/opt/libpq/bin` (psql/pg_dump **18.4**). Runtimes JS: **bun** + node (deno ausente).
@@ -203,4 +214,4 @@ supabase db diff
 
 ---
 
-*Última atualização: 2026-06-01 — criação inicial do documento de contexto.*
+*Última atualização: 2026-06-02 — Frente A (Segurança) concluída: RLS 100%, vazamento de PII do portal fechado, endpoints públicos auditados, isolamento multi-tenant provado, runbook de incidentes. Próximo: Frente C (Banco/Performance).*
