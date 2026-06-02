@@ -79,3 +79,11 @@ Para reativar o portal usando a function segura `portal-data` (já deployada):
 3. **Componentes** (`PortalDashboard`, `PortalShortlistView`, `ClientPortalPage`) → passar `auth.token` aos hooks no lugar de `auth.client.id`.
 4. **`src/hooks/usePortalJobsRealtime.ts`** → realtime dependia de RLS anon (removido); trocar por polling via `portal-data` ou reavaliar.
 5. **Campos legados** (`qualification_*`, `current_company`, `city`, `strengths`, `concerns`) vêm `null`/`[]` da function — UI deve parar de exibi-los ou remapeá-los às fontes atuais numa evolução futura.
+
+## 8. Endpoints públicos (`verify_jwt=false`) — auditoria
+Dos **64 endpoints públicos**, a categorização + leitura de código classificou:
+- **41 legitimamente protegidos**: token-based (19), cron-like (13), valida-auth (5), webhook assinado (1), public-data (3).
+- **23 revisados em profundidade**, destes:
+  - 🔴 **3 ALTO RISCO — CORRIGIDOS (2026-06-02):** `firecrawl-scrape`, `firecrawl-search`, `help-assistant` chamavam API paga / LLM **sem validar o chamador** (abuso de custo por qualquer anônimo com o anon key público). Adicionado helper **`supabase/functions/_shared/require-caller.ts`** (exige usuário autenticado **ou** service_role) e aplicado nas 3 — deployados. A chamada interna `start-technical-session → firecrawl-search` usa service_role (continua funcionando).
+  - 🟡 **3 MÉDIO — documentados (recomendação):** `outreach-webhook-receiver` (webhook Z-API sem validação de assinatura HMAC → adicionar verificação de assinatura), `send-rejection-whatsapp` (não valida que job/candidato pertencem ao chamador antes de gerar mensagem com IA → exigir contexto autenticado), `check-email-domain-organization` (rate-limit por IP falsificável via `x-forwarded-for`).
+  - 17 adequadamente protegidos (token de sessão de entrevista, validação cruzada, etc.).

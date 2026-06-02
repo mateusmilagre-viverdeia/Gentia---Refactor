@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { requireCaller } from "../_shared/require-caller.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,6 +9,15 @@ const corsHeaders = {
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Bloqueia abuso público: exige usuário autenticado ou chamada interna (service_role)
+  const caller = await requireCaller(req);
+  if (!caller.ok) {
+    return new Response(
+      JSON.stringify({ success: false, error: caller.error }),
+      { status: caller.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 
   try {
