@@ -117,3 +117,23 @@ Seed: ACME = 2 candidatos (Ana, Artur) + userA; Beta = 1 candidato (Bruno) + use
 | userA tenta **alterar** candidato de Beta | 0 linhas afetadas | `0` | ✅ |
 
 **Conclusão:** o isolamento por `account_id` (via helper `is_account_member(auth.uid(), account_id)`) funciona em **leitura e escrita**. Tentativas explícitas de acesso cruzado retornam vazio ou são rejeitadas pela policy. Dados de teste removidos após a verificação (banco limpo). O mesmo padrão de policy cobre as demais tabelas multi-tenant (mesma função-helper), e a auditoria global confirmou `policies sem checagem de account_id = 0` nas tabelas de dados de tenant.
+
+---
+
+## 10. Validação com o Supabase Advisor (oficial) — achados extras
+Rodei o **advisor oficial de segurança** (`GET /v1/projects/<ref>/advisors/security`) para validar a auditoria manual com a ferramenta nativa. Ele capturou itens que a varredura de `pg_policies` **não** pegava (views e storage). Resultado inicial: **2 ERROR + 296 WARN** → após correção: **0 ERROR**.
+
+### 🔴 Corrigido — vazamento de PII por view `SECURITY DEFINER` (2 ERROR)
+`employees_public` rodava como o dono (bypass da RLS de `employees`) **e** tinha `GRANT SELECT` para `anon` → expunha **nome, e-mail, telefone, data de nascimento e localização** de todos os funcionários ativos de **todas as empresas**, sem filtro de tenant, a qualquer um com o anon key público. `v_voice_interview_health_24h` (monitoramento) tinha o mesmo padrão. O app **não consome** essas views (só aparecem no `types.ts` gerado).
+**✅ Correção (`20260602160000`):** `security_invoker = true` (a view passa a respeitar a RLS do chamador — cada tenant só vê o seu) + `revoke all ... from anon`. Confirmado: `anon` não acessa mais; `0 ERROR` no advisor.
+
+### 🟢 Corrigido — `search_path` mutável em 6 funções `SECURITY DEFINER`
+`enqueue_email`, `read_email_batch`, `delete_email`, `move_to_dlq` (fila de e-mail, `pgmq.*`) + 2 triggers de `updated_at`. Vetor de *search_path injection*. **✅ Correção (`20260602160000`):** `set search_path = ''` (as funções já qualificam tudo).
+
+### 🟡 Pendentes (WARN — recomendações, exigem decisão/análise):
+| Achado | Qtd | Risco | Recomendação |
+|---|---|---|---|
+| `public_bucket_allows_listing` | 8 buckets | 🟡 **`candidate-files` é público** (CVs/avatares via `getPublicUrl`) — arquivos enumeráveis/baixáveis sem auth. Outros são assets legítimos (logos, careers, feeds). | Tornar `candidate-files` (e avaliar `culture-files`) **privado** + migrar o front de `getPublicUrl`→`createSignedUrl`. **Afeta o front** (decisão como a do portal). |
+| `rls_policy_always_true` | 8 | 🟡 São policies de **INSERT público com `WITH CHECK = true`** (`recruitment_screening_results`, `recruitment_decision_log`, `talent_pool_views`, `candidate_external_entries`, `portal_feedbacks`). Os **SELECT** dessas tabelas **têm** checagem de `account_id` (sem vazamento de leitura). | Anon pode **inserir** linhas em qualquer conta (spam/poluição). Endurecer o `WITH CHECK` onde não for fluxo público legítimo (feedback de candidato é legítimo). |
+| `*_security_definer_function_executable` | 140 | 🟡 Funções `SECURITY DEFINER` executáveis por `anon`/`authenticated`. A maioria são helpers de RLS (precisam ser). | Revisar a lista e `revoke execute from anon` nas que não são de fluxo público. |
+| `extension_in_public` | 2 | 🟢 `unaccent`, `vector` no schema `public`. | Mover para schema `extensions` (cosmético; baixa prioridade). |
