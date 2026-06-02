@@ -177,6 +177,8 @@ project_id = "axumduklmiiptumdsgtu"
     verify_jwt = true
   [functions.portal-reminder-48h]
     verify_jwt = false
+  [functions.portal-data]
+    verify_jwt = false
   [functions.post-job-to-channel]
     verify_jwt = true
   [functions.process-billing-reminders]

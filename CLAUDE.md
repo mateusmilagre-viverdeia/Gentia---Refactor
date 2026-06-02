@@ -30,6 +30,7 @@ O produto (**Gentia**) foi originalmente construído no **Lovable + Lovable Clou
 - [ ] **Escala/infra**: dimensionar instância, connection pooling (pgbouncer/supavisor), limites, observabilidade.
 - [ ] **Auditoria de IA**: inventário de chamadas, modelos por feature, custo estimado, e **proposta de alternativas** (Anthropic, modelos econômicos, caching, batch).
 - [ ] **Desacoplar do Lovable AI Gateway** (ver §6 — risco central da migração).
+- [ ] **Trocar refs/URLs hardcoded** de `axumduklmiiptumdsgtu` (16 ocorrências: `chrome-extension/manifest.json`, `src/pages/careers/*`, `src/hooks/useJobDistribution.ts`) pelo novo backend ou pelas envs `VITE_SUPABASE_*`.
 
 ---
 
@@ -126,16 +127,18 @@ Já existe trabalho prévio documentado em [`docs/SECURITY.md`](docs/SECURITY.md
 > ⚠️ Guardar **apenas identificadores não-secretos** aqui (project ref, URL, nome do repo). Chaves/tokens vão para secrets do Supabase / `.env` local — **nunca** neste arquivo versionado.
 
 ### Git
-- **ORIGEM:** `https://github.com/mateusmilagre-viverdeia/Gentia---Refactor` (branch `main`) — cópia atual exportada do Lovable; é onde estamos trabalhando.
-- **DESTINO:** `https://github.com/ecpmais/culturecode` — repo do cliente (**EP / "ecpmais"**; o produto também é chamado **"culture code"**, ver logos `ep-partners` em `src/assets/`).
+- **Repositório de trabalho:** `https://github.com/mateusmilagre-viverdeia/Gentia---Refactor` (conta do dono; é o `origin` deste worktree, branch `main`). **Origem e destino do versionamento são o MESMO repo** — o refactor é versionado aqui.
+  - ✅ **Push validado** (token fine-grained no `.env`, testado via `git push --dry-run` em 2026-06-01). `gh` CLI não instalado, mas dispensável (uso `git` + token via askpass efêmero, **sem** persistir no `.git/config`).
+  - ⚠️ Esse token foi **exposto no chat** → **rotacionar** assim que estabilizar.
+- ~~`ecpmais/culturecode`~~ — **descartado** (era engano; conta de terceiro, 404 sem acesso). O produto ainda é chamado "culture code" (logos `ep-partners` em `src/assets/`), mas o código mora no repo acima.
 
 ### Supabase
-- **ORIGEM (Lovable Cloud):** project ref `axumduklmiiptumdsgtu`.
-  - ⚠️ **Não está acessível pelo MCP conectado** (fica na infra/conta do Lovable). Schema e functions, porém, **já estão neste repo** (`supabase/migrations` + `supabase/functions`) → dá pra reconstruir o destino sem depender do Lovable. Falta da origem: **dados de produção, secrets, config de Auth e arquivos de Storage**.
-- **DESTINO (novo, dedicado):** projeto **já criado pelo dono numa OUTRA conta Supabase** (≠ org `viverdeia` à qual o MCP atual está conectado). Dono fornece **project ref + URL + keys + Personal Access Token**.
-  - ⚠️ Como está em outra conta, o **MCP atual não alcança** o destino → operar via **Supabase CLI + PAT** (`SUPABASE_ACCESS_TOKEN`) por Bash, ou reconfigurar o MCP para essa conta.
-  - Estado do destino: **banco limpo**. Decisão do dono: **migrar tudo** da origem (schema + functions + dados + secrets + Auth + Storage) → paridade total.
-  - Project ref / URL: `__________` (a fornecer).
+- **Conta/Org:** **"EP Partners PRO"** (`ketdvcuiagjnkxkqcmry`) — org do cliente (EP Partners), plano **Pro**. Operar via **Supabase CLI + access token** (no `.env`), *não* pelo MCP da org `viverdeia`.
+- **DESTINO ✅ criado:** **"Gentia SP"** — ref **`tdyvuomybimgygjgvnrk`**, **sa-east-1 (São Paulo)**, PG17, compute **Small** (`ci_small`, 2GB RAM, ~$15/mês), `ACTIVE_HEALTHY` (2026-06-01). Banco vazio, a popular pela migração. Connection strings + senha (gerada localmente, nunca no chat) no `.env`. Compute alterado via `PATCH /v1/projects/{ref}/billing/addons`.
+  - Projeto **"Gentia"/Oregon (`hcupedlkavszvevavufx`)** — criado por engano em West US; vazio, **a descartar** após validar o de SP (depois renomear "Gentia SP" → "Gentia").
+- **ORIGEM (Lovable Cloud) ✅ confirmada = `axumduklmiiptumdsgtu`** (16 refs no repo: `config.toml`, `chrome-extension/manifest.json`, `src/pages/careers/*`, `src/hooks/useJobDistribution.ts`).
+  - ⚠️ **Token da EP Partners NÃO acessa** esse projeto (é gerido pelo Lovable) → preciso da **connection string do banco de origem** (pegar no Lovable Cloud) p/ `pg_dump` de schema + dados. Schema/functions já estão no repo; faltam **dados, secrets, Auth e Storage**.
+  - ❌ O **"Lovable Project"** (`vbwsxzpsmjjyztojhhhz`) na org EP Partners **NÃO é a origem** (não aparece no repo) — **não tocar**.
 
 > ❗ **Regra de segurança operacional**: confirmar SEMPRE em qual ambiente (origem vs destino) uma ação roda antes de executar migrations, deploy de functions ou `execute_sql`. Não rodar nada destrutivo sem confirmação explícita do dono.
 
@@ -144,6 +147,26 @@ Já existe trabalho prévio documentado em [`docs/SECURITY.md`](docs/SECURITY.md
 - **`.env.example`** criado na raiz = inventário completo de variáveis/secrets (frontend + edge functions), sem valores.
 
 ---
+
+## 8.5 Progresso da Migração (LOG VIVO)
+
+### Fase 1 — Schema ✅ **COMPLETA** (replay das 477 migrations no DESTINO `tdyvuomybimgygjgvnrk`)
+- **415 tabelas, 4 views, 274 funções, 37 enums, 481 migrations aplicadas; RLS em 100% das tabelas.** Paridade com o schema real (`types.ts`): **0 drift de tabela e 0 de coluna** confirmado via `scripts/check_column_drift.ts` (faltava só `recruitment_credit_costs.usage_unit`, adicionada). (2026-06-02)
+- **Auditoria de segurança iniciada** → `docs/SECURITY_AUDIT.md`. Achado 🔴 crítico: portal de cliente com 8 tabelas expostas a `anon` (PII de candidatos). Achado secundário: hook do portal (`src/hooks/usePortalData.ts`) usa colunas inexistentes → bug pré-existente do front (não drift).
+- **Schema drift do Lovable** (objetos criados na origem fora de migration) — diagnosticado comparando `src/integrations/supabase/types.ts` (schema real) com as migrations:
+  - **11 tabelas** (módulo franquias/billing): `ep_partners`, `partner_client_grants`, `partner_licenses`, `partner_royalties`, `platform_seat_pricing`, `platform_subscription_plans`, `promo_code_redemptions`, `recruitment_headcount_plan`, `recruitment_package_features`, `recruitment_source_spend`, `whatsapp_message_logs`.
+  - **função `has_role`** (RBAC) + **extensão `unaccent`**.
+- Fixes **versionados** em `supabase/migrations/20260114235730..235735_fix_drift_*.sql`.
+- Gerador: **`scripts/gen_drift_tables.ts`** (rodar com **bun**, não deno) reconstrói as tabelas drift a partir do `types.ts`.
+- ⚠️ Pendência: refinar **tipos** das tabelas drift na fase de dados (ex.: `stripe_*_id` é `text`, o gerador inferiu `uuid`).
+
+### Fase 2 — Edge Functions ✅ **COMPLETA**
+- **283/283 functions deployadas** no destino via `supabase functions deploy` (bulk; **sem Docker** — bundler nativo). Confirmado via API `GET /v1/projects/<ref>/functions`. (2026-06-02)
+- ⚠️ Deployadas ≠ funcionais: ainda faltam **secrets** (Fase 3) e **dados** (Fase 4) para rodarem de fato.
+
+### Conectividade (IMPORTANTE)
+- `psql` DIRECT (`db.<ref>.supabase.co`) tem **DNS/IPv6 intermitente** → para inspeção use a **query API HTTPS**: `POST https://api.supabase.com/v1/projects/<ref>/database/query` (estável). Para migrations, `supabase db push`.
+- pg tools instaladas em `/opt/homebrew/opt/libpq/bin` (psql/pg_dump **18.4**). Runtimes JS: **bun** + node (deno ausente).
 
 ## 9. Comandos Úteis
 
