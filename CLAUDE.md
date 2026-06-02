@@ -25,7 +25,7 @@ O produto (**Gentia**) foi originalmente construído no **Lovable + Lovable Clou
 > Atualizar status conforme avançamos. (`[ ]` pendente · `[~]` em andamento · `[x]` concluído)
 
 - [x] **Segurança backend** (Frente A ✅): RLS em 415/415 tabelas (com policy), vazamento de PII do portal fechado, endpoints públicos auditados (3 de alto risco corrigidos), isolamento multi-tenant provado. Ver §8.5 "Frente A" e `docs/SECURITY_AUDIT.md`. _(Revisão fina de `service_role` por função e auditoria de secrets vazados ocorre no cutover, com os secrets reais.)_
-- [ ] **Performance/queries**: índices, planos de execução, queries pesadas, paginação, N+1, views materializadas.
+- [~] **Performance/queries** (Frente C): RLS InitPlan otimizado (1090 policies), 206 índices de FK criados, 46 redundâncias removidas (advisor 2664→1476). Planos/queries pesadas e `unused_index` dependem de tráfego real → cutover. Ver `docs/PERFORMANCE_AUDIT.md`.
 - [ ] **Migração Lovable Cloud → Supabase dedicado**: migrar schema (477 migrations), 284 edge functions, secrets, storage, auth, cron jobs; validar paridade.
 - [ ] **Escala/infra**: dimensionar instância, connection pooling (pgbouncer/supavisor), limites, observabilidade.
 - [ ] **Auditoria de IA**: inventário de chamadas, modelos por feature, custo estimado, e **proposta de alternativas** (Anthropic, modelos econômicos, caching, batch).
@@ -172,8 +172,18 @@ Já existe trabalho prévio documentado em [`docs/SECURITY.md`](docs/SECURITY.md
 - **🟡** 9 tabelas drift sem policy → policies de SELECT (`20260602150000`).
 - **Endpoints públicos** (`verify_jwt=false`) auditados: 3 de ALTO risco (abuso de custo — `firecrawl-scrape/search`, `help-assistant`) corrigidos com helper `_shared/require-caller.ts`; 3 de risco MÉDIO documentados.
 - **Isolamento multi-tenant PROVADO** (auditoria §9): RLS testada via `set local role authenticated` + `request.jwt.claims` com 2 tenants fake. Leitura **e** escrita isoladas; cross-tenant bloqueado (`ERROR 42501`). Dados de teste removidos.
-- Commits: `176b594`, `e9440f3`, `c265913`, `3b2e833`.
-- ⏳ **Próximas frentes** (ordem técnica): C) Banco/Performance → E) Infra/Escala → F) LLMs (inventário + Anthropic + desacoplar Lovable Gateway) → B) Observabilidade → D) Backup/DR.
+- **Validado com o Supabase Advisor oficial** (REST, token EP Partners — o MCP é da org `viverdeia`, sem permissão). Revelou achados que a varredura manual não pegou: 🔴 **`employees_public`** (view SECURITY DEFINER + grant anon → vazava PII de funcionários, sem filtro de tenant) e `v_voice_interview_health_24h` → `security_invoker=true` + revoke anon (`20260602160000`); 🟡 **bucket `candidate-files`** (CVs/avatares) era público → privado + signed URLs no front (`20260602170000` + `src/lib/storageUrl.ts`, `MinhaBiografia`/`CandidateDetailsModal`); 6 funções `search_path` mutável fixadas. **Advisor segurança: 2 ERROR → 0.**
+- Commits: `176b594`, `e9440f3`, `c265913`, `3b2e833`, `b8b1d7c`, `cd14ce9`.
+- ⏳ Pendências documentadas (não-críticas, para o cutover): front do portal e do marketplace (signed URLs); endurecer INSERT público `WITH CHECK(true)`; revisar 140 funções definer executáveis por anon.
+
+### Frente C — Banco de Dados / Performance ✅ **COMPLETA** (parte sem dados reais)
+> Entregável "c) Banco de Dados". Relatório: `docs/PERFORMANCE_AUDIT.md`. Advisor performance: **2664 → 1476 lints**.
+- **RLS InitPlan** (maior ganho): `auth.uid()`/`role`/`jwt`/`current_setting` → `(select …)` em **1090 policies** (`auth_rls_initplan` 1088→0). Semântica preservada — **isolamento re-testado** (idêntico). Migrations `20260602190000/190001`.
+- **206 índices** criados em FKs de domínio sem cobertura (`unindexed_foreign_keys` 236→30; restantes = auditoria `auth.users`, por decisão). Migration `20260602180000`.
+- **46 redundâncias** removidas (45 índices + 1 constraint; `duplicate_index` 7→0), **preservando índices parciais distintos** (`is_test` true/false — um falso-positivo evitado). Migrations `20260602200000/200001`.
+- ⏳ Para o cutover (dependem de tráfego real): `multiple_permissive_policies` (848, consolidar nas tabelas quentes), `unused_index` (reavaliar com `pg_stat_user_indexes` + habilitar `pg_stat_statements`). Plano de escala 12 meses no relatório.
+- Commits: `4471121`, `8d20df9`, `a8c55dc`, `92a5b81`, `442ffe7`.
+- ⏳ **Próximas frentes**: E) Infra/Escala (pooling Supavisor, compute) → F) LLMs (inventário + Anthropic + desacoplar Lovable Gateway) → B) Observabilidade → D) Backup/DR.
 
 ### Conectividade (IMPORTANTE)
 - `psql` DIRECT (`db.<ref>.supabase.co`) tem **DNS/IPv6 intermitente** → para inspeção use a **query API HTTPS**: `POST https://api.supabase.com/v1/projects/<ref>/database/query` (estável). Para migrations, `supabase db push`.
@@ -214,4 +224,4 @@ supabase db diff
 
 ---
 
-*Última atualização: 2026-06-02 — Frente A (Segurança) concluída: RLS 100%, vazamento de PII do portal fechado, endpoints públicos auditados, isolamento multi-tenant provado, runbook de incidentes. Próximo: Frente C (Banco/Performance).*
+*Última atualização: 2026-06-02 — Frentes A (Segurança) e C (Banco/Performance) concluídas. Segurança: RLS 100%, PII do portal + employees_public + candidate-files fechados, isolamento provado, advisor 2 ERROR→0, runbook. Performance: RLS InitPlan (1090 policies), 206 índices FK, 46 redundâncias removidas, advisor 2664→1476, relatório + plano de escala. Próximo: Frente E (Infra/Escala) → F (LLMs).*
