@@ -27,6 +27,7 @@ import {
 import { toast } from "sonner";
 import { parse } from "date-fns";
 import { formatBRT } from "@/lib/datetime";
+import { useSignedFileUrl } from "@/lib/storageUrl";
 
 interface Education {
   id?: string;
@@ -245,11 +246,8 @@ export default function MinhaBiografia() {
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from("candidate-files")
-        .getPublicUrl(filePath);
-
-      setProfile({ ...profile, avatar_url: publicUrl });
+      // Bucket privado: salvamos o PATH; a exibição gera signed URL on-demand.
+      setProfile({ ...profile, avatar_url: filePath });
       toast.success("Foto atualizada!");
     } catch (error) {
       console.error("Error uploading avatar:", error);
@@ -285,11 +283,8 @@ export default function MinhaBiografia() {
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from("candidate-files")
-        .getPublicUrl(filePath);
-
-      setProfile({ ...profile, cv_url: publicUrl });
+      // Bucket privado: salvamos o PATH; o download gera signed URL on-demand.
+      setProfile({ ...profile, cv_url: filePath });
       toast.success("Currículo atualizado!");
     } catch (error) {
       console.error("Error uploading CV:", error);
@@ -474,6 +469,9 @@ export default function MinhaBiografia() {
     }
   };
 
+  // Bucket privado: resolve o path salvo em avatar_url para uma signed URL exibível.
+  const avatarDisplayUrl = useSignedFileUrl("candidate-files", profile.avatar_url);
+
   const initials = [profile.first_name?.[0], profile.last_name?.[0]]
     .filter(Boolean)
     .join("")
@@ -517,7 +515,7 @@ export default function MinhaBiografia() {
                 <div className="flex items-center gap-4">
                   <div className="relative group shrink-0">
                     <Avatar className="h-16 w-16 border-2 border-border">
-                      <AvatarImage src={profile.avatar_url} alt={`${profile.first_name} ${profile.last_name}`} />
+                      <AvatarImage src={avatarDisplayUrl ?? undefined} alt={`${profile.first_name} ${profile.last_name}`} />
                       <AvatarFallback className="text-lg bg-muted">
                         {initials}
                       </AvatarFallback>

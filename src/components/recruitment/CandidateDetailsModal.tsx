@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useSignedFileUrl } from "@/lib/storageUrl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -262,9 +263,10 @@ export function CandidateDetailsModal({
   const email = candidateData?.email || profile?.email || "";
   const phone = candidateData?.phone || profile?.phone || "";
   const city = candidateData?.city || profile?.city || "";
-  const avatar = candidateData?.avatar || profile?.avatar_url || "";
+  // candidate-files é privado: path -> signed URL; URL externa passa direto (compat no helper).
+  const avatar = useSignedFileUrl("candidate-files", candidateData?.avatar || profile?.avatar_url) ?? undefined;
   const linkedinUrl = candidateData?.linkedinUrl || profile?.linkedin_url || "";
-  const cvUrl = profile?.cv_url || "";
+  const cvUrl = useSignedFileUrl("candidate-files", profile?.cv_url) ?? "";
 
   const formatDate = (date: string | null) => {
     if (!date) return "";
