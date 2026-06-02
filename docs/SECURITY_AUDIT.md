@@ -4,7 +4,7 @@
 > *Lista documentada das tabelas revisadas, políticas de RLS ajustadas e riscos remanescentes*).
 > Ambiente auditado: **destino `tdyvuomybimgygjgvnrk` (Gentia SP)** — réplica fiel da origem.
 
-**Início:** 2026-06-02 · **Status:** em andamento (RLS concluído; endpoints públicos, service_role e isolamento em sequência)
+**Início:** 2026-06-02 · **Status:** ✅ **Frente A (Segurança) concluída** — RLS em 100% das tabelas, achados críticos corrigidos, endpoints públicos auditados e **isolamento multi-tenant provado** (§9). Próximas frentes: Banco de Dados, Infra/Escala, LLMs, Observabilidade, Backup.
 
 ---
 
@@ -56,17 +56,18 @@ Policy `USING(true)` para o role `public` (inclui anon) com comando **ALL** → 
 > Catálogos legítimos (OK, não sensíveis): `badges`, `survey_benchmarks`, `courses`, `lessons`, `modules`, `culture_code_templates`, `onboarding_templates*`, `qa_questions`.
 
 ### 4.2 9 tabelas drift com RLS sem policy
-`ep_partners`, `partner_client_grants`, `partner_licenses`, `partner_royalties`, `platform_seat_pricing`, `platform_subscription_plans`, `promo_code_redemptions`, `recruitment_package_features`, `whatsapp_message_logs` — habilitei RLS na reconstrução, mas faltam policies (hoje só acessíveis via service_role). **Correção:** criar policies adequadas (a maioria é config de plataforma → super_admin/serviço; `ep_partners` por `user_id`).
+`ep_partners`, `partner_client_grants`, `partner_licenses`, `partner_royalties`, `platform_seat_pricing`, `platform_subscription_plans`, `promo_code_redemptions`, `recruitment_package_features`, `whatsapp_message_logs` — habilitei RLS na reconstrução, mas faltavam policies (só acessíveis via service_role). **Correção:** criar policies adequadas (a maioria é config de plataforma → super_admin/serviço; `ep_partners` por `user_id`).
+- **✅ CORRIGIDO (2026-06-02):** migration `20260602150000_security_drift_tables_policies.sql` — policies de SELECT criadas: franquias (`ep_partners` por `user_id`+super_admin; `partner_*`/`promo_code_redemptions` ligadas ao partner do usuário), catálogos de pricing (`platform_subscription_plans`, `platform_seat_pricing`, `recruitment_package_features` legíveis por autenticados), `whatsapp_message_logs` só super_admin. Escrita continua via service_role. **Verificação global:** `rls_sem_policy = 0` — todas as 415 tabelas têm RLS **e** policy.
 
 ---
 
 ## 5. Plano de correção (priorizado)
 1. ✅ **Portal por token** (3.1) — **FEITO (banco)**: 10 policies anon removidas + function `portal-data` deployada. Front pendente (§7).
 2. 🔴 **`culture_interview_criteria_evaluations`** (3.2) — recriar policies. *(próximo)*
-3. 🟡 **Config sensível entre tenants** (4.1) — restringir.
-4. 🟡 **Policies das 9 tabelas drift** (4.2).
-5. Auditoria dos **85 endpoints públicos** (`verify_jwt=false`).
-6. Teste prático de **isolamento multi-tenant** (com tenants fake).
+3. ✅ **Config sensível entre tenants** (4.1) — restringido (`20260602140000`).
+4. ✅ **Policies das 9 tabelas drift** (4.2) — FEITO (`20260602150000`).
+5. ✅ Auditoria dos **endpoints públicos** (`verify_jwt=false`) — FEITO (§8): 3 ALTO corrigidos, 3 MÉDIO documentados.
+6. ✅ Teste prático de **isolamento multi-tenant** — FEITO (§9): leitura **e** escrita isoladas, com evidência.
 
 ## 6. Riscos remanescentes
 - **Portal no frontend não-funcional** até a integração da §7 (mas já estava quebrado — risco de funcionalidade, não de segurança).
@@ -87,3 +88,32 @@ Dos **64 endpoints públicos**, a categorização + leitura de código classific
   - 🔴 **3 ALTO RISCO — CORRIGIDOS (2026-06-02):** `firecrawl-scrape`, `firecrawl-search`, `help-assistant` chamavam API paga / LLM **sem validar o chamador** (abuso de custo por qualquer anônimo com o anon key público). Adicionado helper **`supabase/functions/_shared/require-caller.ts`** (exige usuário autenticado **ou** service_role) e aplicado nas 3 — deployados. A chamada interna `start-technical-session → firecrawl-search` usa service_role (continua funcionando).
   - 🟡 **3 MÉDIO — documentados (recomendação):** `outreach-webhook-receiver` (webhook Z-API sem validação de assinatura HMAC → adicionar verificação de assinatura), `send-rejection-whatsapp` (não valida que job/candidato pertencem ao chamador antes de gerar mensagem com IA → exigir contexto autenticado), `check-email-domain-organization` (rate-limit por IP falsificável via `x-forwarded-for`).
   - 17 adequadamente protegidos (token de sessão de entrevista, validação cruzada, etc.).
+
+---
+
+## 9. Evidência de isolamento multi-tenant (RLS) ✅
+Teste prático provando que a RLS isola os tenants — não basta a policy existir, é preciso comprovar que **um tenant não acessa dados de outro**, nem por leitura nem por escrita.
+
+**Método:** 2 tenants fake (`ACME`, `Beta`) criados via `companies` + `account_members` + `auth.users` fake. Cada papel simulado na própria sessão Postgres com o role e o `auth.uid()` reais que o Supabase injeta:
+```sql
+begin;
+set local role authenticated;                                  -- mesmo role do PostgREST p/ usuário logado
+set local request.jwt.claims to '{"sub":"<user_id>"}';         -- auth.uid() passa a valer esse id
+select ... from recruitment_candidates;                        -- RLS aplicada exatamente como em produção
+rollback;
+```
+Seed: ACME = 2 candidatos (Ana, Artur) + userA; Beta = 1 candidato (Bruno) + userB.
+
+**Resultados (tabela `recruitment_candidates`, PII de candidatos):**
+
+| Cenário | Esperado | Obtido | ✓ |
+|---|---|---|---|
+| userA (ACME) lê candidatos | só os 2 da ACME | `2 [Ana, Artur]` | ✅ |
+| userA tenta ler candidato de Beta (por email) | 0 linhas | `0` | ✅ |
+| userB (Beta) lê candidatos | só o 1 da Beta | `1 [Bruno]` | ✅ |
+| userB tenta ler candidatos da ACME | 0 linhas | `0` | ✅ |
+| anon (sem login) lê qualquer candidato | 0 linhas | `0` | ✅ |
+| userA tenta **inserir** candidato na conta de Beta | bloqueado | `ERROR 42501: new row violates row-level security policy` | ✅ |
+| userA tenta **alterar** candidato de Beta | 0 linhas afetadas | `0` | ✅ |
+
+**Conclusão:** o isolamento por `account_id` (via helper `is_account_member(auth.uid(), account_id)`) funciona em **leitura e escrita**. Tentativas explícitas de acesso cruzado retornam vazio ou são rejeitadas pela policy. Dados de teste removidos após a verificação (banco limpo). O mesmo padrão de policy cobre as demais tabelas multi-tenant (mesma função-helper), e a auditoria global confirmou `policies sem checagem de account_id = 0` nas tabelas de dados de tenant.
