@@ -183,7 +183,15 @@ Já existe trabalho prévio documentado em [`docs/SECURITY.md`](docs/SECURITY.md
 - **46 redundâncias** removidas (45 índices + 1 constraint; `duplicate_index` 7→0), **preservando índices parciais distintos** (`is_test` true/false — um falso-positivo evitado). Migrations `20260602200000/200001`.
 - ⏳ Para o cutover (dependem de tráfego real): `multiple_permissive_policies` (848, consolidar nas tabelas quentes), `unused_index` (reavaliar com `pg_stat_user_indexes` + habilitar `pg_stat_statements`). Plano de escala 12 meses no relatório.
 - Commits: `4471121`, `8d20df9`, `a8c55dc`, `92a5b81`, `442ffe7`.
-- ⏳ **Próximas frentes**: E) Infra/Escala (pooling Supavisor, compute) → F) LLMs (inventário + Anthropic + desacoplar Lovable Gateway) → B) Observabilidade → D) Backup/DR.
+
+### Frente B — Observabilidade ✅ **COMPLETA** (parte sem dados reais)
+> Entregável "b) Observabilidade". Doc: `docs/OBSERVABILITY.md`. Reaproveita a infra existente (logger, `ai_execution_logs`, 6 crons pg_cron, alertas de domínio, Discord) e adiciona a camada **operacional**.
+- **Métricas de IA**: views `v_ops_ai_*` (custo/dia, p95+erro% por função, por modelo, erros recentes) + RPC **`ops_ai_metrics(days)`** (super_admin) — `20260603120000`. Validado com dados fake.
+- **Monitor + alertas**: tabela **`ops_alerts`** (`20260603130000`) + edge function **`ops-health-monitor`** (deployada): detecta custo de IA 24h > teto, taxa de erro alta, funções com muitas falhas → grava + Discord. **Validado e2e** (auth via `x-cron-secret`/service_role; 401 sem secret).
+- **Log estruturado**: `_shared/structured-log.ts` (`fnLogger`, JSON, sem PII) para Log Drains.
+- Commits: `b6de466`, `8748266`, `2e87aa5`.
+- ⚠️ **Cutover**: os 6 crons + (a agendar) o `ops-health-monitor` apontam/apontarão para URL+keys que mudam; `CRON_SECRET` está com valor de TESTE (rotacionar). Checklist completo no doc.
+- ⏳ **Próximas frentes**: E) Infra/Escala (pooling Supavisor, compute) → F) LLMs (inventário + Anthropic + desacoplar Lovable Gateway) → D) Backup/DR.
 
 ### Conectividade (IMPORTANTE)
 - `psql` DIRECT (`db.<ref>.supabase.co`) tem **DNS/IPv6 intermitente** → para inspeção use a **query API HTTPS**: `POST https://api.supabase.com/v1/projects/<ref>/database/query` (estável). Para migrations, `supabase db push`.
@@ -224,4 +232,4 @@ supabase db diff
 
 ---
 
-*Última atualização: 2026-06-02 — Frentes A (Segurança) e C (Banco/Performance) concluídas. Segurança: RLS 100%, PII do portal + employees_public + candidate-files fechados, isolamento provado, advisor 2 ERROR→0, runbook. Performance: RLS InitPlan (1090 policies), 206 índices FK, 46 redundâncias removidas, advisor 2664→1476, relatório + plano de escala. Próximo: Frente E (Infra/Escala) → F (LLMs).*
+*Última atualização: 2026-06-03 — Frentes A (Segurança), C (Banco/Performance) e B (Observabilidade) concluídas. A: RLS 100%, PII (portal/employees_public/candidate-files) fechada, isolamento provado, advisor 2 ERROR→0, runbook. C: RLS InitPlan (1090 policies), 206 índices FK, 46 redundâncias, advisor 2664→1476, relatório + escala. B: métricas de IA (views+RPC), ops-health-monitor + ops_alerts (e2e), log estruturado, OBSERVABILITY.md. Próximo: Frente E (Infra/Escala) → F (LLMs) → D (Backup/DR).*
