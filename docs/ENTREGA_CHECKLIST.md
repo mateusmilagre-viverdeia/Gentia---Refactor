@@ -81,7 +81,7 @@
 - [x] Recomendação de modelo/provedor por tipo de tarefa (incl. **Claude**) → §5
 - [🟡] Comparativo custo atual × projetado → §5.1 (tabela Gemini×direto×Claude em R$/mês e R$/ano; premissas documentadas; travar volume/markup no cutover)
 - [🟡] Fallback p/ falhas de LLM → §7 (cadeias por feature desenhadas; implementar)
-- [🟡] **Desacoplar Lovable Gateway → provedores diretos** → §6 (plano da reescrita do wrapper; **não implementado**, por decisão)
+- [🟡] **Desacoplar Lovable Gateway → provedores diretos** → §6 **IMPLEMENTADO atrás de flag** (`LLM_DIRECT_PROVIDERS`, default OFF; commit `302f927`; 4 functions, bundle validado). Ativar no cutover: popular `GEMINI_API_KEY` + ligar flag.
 
 ## g) Entregáveis (artefatos para aceite)
 - [🟡] Relatório de auditoria antes/depois → `SECURITY_AUDIT.md` + `PERFORMANCE_AUDIT.md` (consolidar 1 sumário executivo)

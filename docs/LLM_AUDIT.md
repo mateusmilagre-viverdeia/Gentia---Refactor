@@ -84,8 +84,8 @@ Custo/chamada com Claude (preços oficiais, tokens do mapping):
 - **Recomendação: C** (com opção de subir pareceres para Sonnet após A/B de qualidade).
 - **Travar no cutover:** volume real (`ai_execution_logs`), % de markup (fatura Lovable), preço público vigente do Gemini.
 
-## 6. Desacoplamento do Lovable Gateway — plano (NÃO implementado)
-Como o wrapper já é OpenAI-compatible e os modelos são `provider/model`, a mudança é **localizada no `llm-tool-call.ts`** (roteia por prefixo), sem tocar as 85 functions:
+## 6. Desacoplamento do Lovable Gateway — ✅ IMPLEMENTADO (atrás de flag, default OFF)
+Implementado em `_shared/llm-tool-call.ts` (commit `302f927`): `callLLMTool` roteia por prefixo do modelo quando `LLM_DIRECT_PROVIDERS=true`; com a flag **OFF (padrão)** segue 100% no gateway (**zero risco**). Reusa o cliente Anthropic **nativo** (`callClaudeWithTool`, Messages API — não shim). Só **4 functions** usam o wrapper (raio pequeno); todas redeployadas e com bundle validado. Lógica:
 
 ```ts
 // pseudo — resolver endpoint+key por prefixo do modelo
@@ -102,7 +102,7 @@ function route(model: string) {
   return { url: LOVABLE_AI_URL, key: env("LOVABLE_API_KEY") };
 }
 ```
-- **Migração segura:** flag/env `LLM_DIRECT_PROVIDERS=true` para alternar gateway↔direto; começar pelas features de menor risco; `platform_ai_model_config` segue trocando modelo sem deploy.
+- **Ativação (cutover), em ordem:** (1) popular a secret **`GEMINI_API_KEY`** (hoje placeholder `PENDING_...`); (2) `LLM_DIRECT_PROVIDERS=true`; (3) redeploy das 4 functions; (4) validar feature a feature. Enquanto a key do Gemini for placeholder, o Gemini cai no gateway automaticamente (fallback gracioso) — então dá pra ativar Claude/OpenAI direto antes do Gemini, se quiser migração incremental. `platform_ai_model_config` segue trocando modelo sem deploy.
 - **Anthropic:** já temos `ANTHROPIC_API_KEY` (salva) + `_shared/anthropic-client.ts`. Tool-calling do Claude mapeia para o mesmo contrato (`tools`/`tool_choice`).
 - Remove a dependência de `LOVABLE_API_KEY` (90 functions) — item de maior risco da migração (CLAUDE.md §6).
 
