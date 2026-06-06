@@ -247,15 +247,16 @@ async function createCultureSessionFromOffline(args: {
   agentId = job?.agent_id || null;
   if (!agentId) {
     const { data: step } = await supabaseAdmin
-      .from("recruitment_workflow_steps")
+      .from("recruitment_job_workflow_steps")
       .select("agent_id").eq("job_id", upload.job_id).eq("step_type", "cultural").eq("is_active", true)
+      .not("agent_id", "is", null).order("position", { ascending: true }).limit(1)
       .maybeSingle();
     agentId = step?.agent_id || null;
   }
   if (!agentId) {
     const { data: agent } = await supabaseAdmin
       .from("recruitment_agents")
-      .select("id").eq("account_id", upload.account_id).eq("type", "cultural").eq("is_active", true)
+      .select("id").eq("account_id", upload.account_id).in("type", ["cultural", "structured"]).eq("is_active", true)
       .limit(1).maybeSingle();
     agentId = agent?.id || null;
   }
@@ -390,8 +391,9 @@ async function createTechnicalSessionFromOffline(args: {
   // Resolve technical agent + load JD context
   let agentId: string | null = null;
   const { data: step } = await supabaseAdmin
-    .from("recruitment_workflow_steps")
+    .from("recruitment_job_workflow_steps")
     .select("agent_id").eq("job_id", upload.job_id).eq("step_type", "technical").eq("is_active", true)
+    .not("agent_id", "is", null).order("position", { ascending: true }).limit(1)
     .maybeSingle();
   agentId = step?.agent_id || null;
   if (!agentId) {

@@ -3,6 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { sendWhatsAppViaZApi } from "../_shared/whatsapp-zapi.ts";
 import { sendEmailViaResend } from "../_shared/resend-email.ts";
 import { filterFactualQuestions } from "../_shared/factualQuestionFilter.ts";
+import { resolveCulturalAgentId } from "../_shared/resolveCulturalAgent.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -182,6 +183,27 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
 
+      // Resolve cultural agent_id (Fase 2): persist at session creation so
+      // we don't depend solely on the runtime fallback in culture-interview-complete.
+      const resolvedAgent = await resolveCulturalAgentId(supabase, {
+        jobId: job_id,
+        accountId: candidate.account_id,
+        fallbackId: agent_id,
+      });
+      console.log("[send-interview-invite] agent resolved", {
+        job_id,
+        account_id: candidate.account_id,
+        level: resolvedAgent.level,
+        source: resolvedAgent.source,
+        agent_id: resolvedAgent.agentId,
+      });
+      if (!resolvedAgent.agentId) {
+        console.warn("[send-interview-invite] no cultural agent resolved", {
+          job_id,
+          account_id: candidate.account_id,
+        });
+      }
+
       // Create interview session
       const { data: newSession, error: sessionError } = await supabase
         .from("culture_interview_sessions")
@@ -189,7 +211,7 @@ const handler = async (req: Request): Promise<Response> => {
           account_id: candidate.account_id,
           candidate_id: candidate_id,
           job_id: job_id,
-          agent_id: agent_id || null,
+          agent_id: resolvedAgent.agentId,
           token: interviewToken,
           status: "pending",
           expires_at: expiresAt.toISOString(),

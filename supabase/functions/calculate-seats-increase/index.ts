@@ -81,8 +81,70 @@ serve(async (req) => {
       .eq('org_id', account_id)
       .maybeSingle();
 
+    const BASE_PLAN_PRICE_ID = "price_1SivZbKV6gEseQSlAlIoMXok";
+    const SEAT_PRICE_IDS = [
+      "price_1SivVkKV6gEseQSlCuzv0qAM",
+      "price_1SizCUKV6gEseQSlCVl5Wo4x",
+    ];
+
+    // Check active grants (waive base plan + free seats)
+    const nowIso = new Date().toISOString();
+    const [{ data: seatGrants }, { data: adminGrants }] = await Promise.all([
+      supabaseClient
+        .from('org_seat_grants')
+        .select('free_seats, valid_until')
+        .eq('org_id', account_id),
+      supabaseClient
+        .from('admin_grants')
+        .select('id, expires_at, revoked_at')
+        .eq('org_id', account_id)
+        .is('revoked_at', null)
+        .gt('expires_at', nowIso),
+    ]);
+
+    const freeSeats = (seatGrants ?? [])
+      .filter((g: any) => !g.valid_until || g.valid_until > nowIso)
+      .reduce((sum: number, g: any) => sum + (g.free_seats || 0), 0);
+    const hasAdminGrant = (adminGrants?.length ?? 0) > 0;
+    const hasActiveGrant = freeSeats > 0 || hasAdminGrant;
+
+    logStep("Grants evaluated", { freeSeats, hasAdminGrant, hasActiveGrant });
+
     if (!billing || !billing.stripe_subscription_id) {
-      throw new Error("No active subscription found");
+      logStep("No active subscription found, returning setup info", { account_id });
+
+      const seatUnitPrice = 19.90;
+      const basePlanAmount = hasActiveGrant ? 0 : 297.00;
+      const paidSeats = hasActiveGrant ? Math.max(0, quantity - freeSeats) : quantity;
+      const increaseAmount = paidSeats * seatUnitPrice;
+
+      return new Response(JSON.stringify({
+        requiresNewSubscription: true,
+        currentMonthlyAmount: 0,
+        currentSeatQuantity: 0,
+        basePlanAmount,
+        currentSeatsAmount: 0,
+        seatsToAdd: quantity,
+        paidSeats,
+        freeSeats,
+        grantApplied: hasActiveGrant,
+        increaseAmount,
+        newSeatQuantity: quantity,
+        newSeatsAmount: increaseAmount,
+        newMonthlyAmount: basePlanAmount + increaseAmount,
+        proRataCharge: 0,
+        remainingDays: 0,
+        totalDays: 30,
+        nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        subscriptionId: null,
+        seatSubscriptionItemId: null,
+        seatPriceId: SEAT_PRICE_IDS[1],
+        basePlanPriceId: hasActiveGrant ? null : BASE_PLAN_PRICE_ID,
+        unitPrice: seatUnitPrice,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
     }
 
     logStep("Billing info retrieved", { 
@@ -97,12 +159,6 @@ serve(async (req) => {
     }
 
     // Find the seat subscription item
-    const BASE_PLAN_PRICE_ID = "price_1SivZbKV6gEseQSlAlIoMXok";
-    const SEAT_PRICE_IDS = [
-      "price_1SivVkKV6gEseQSlCuzv0qAM",
-      "price_1SizCUKV6gEseQSlCVl5Wo4x",
-    ];
-
     let basePlanAmount = 0;
     let primarySeatItem: { id: string; priceId: string; quantity: number; unitAmount: number } | null = null;
     let currentMonthlyTotal = 0;
@@ -150,9 +206,12 @@ serve(async (req) => {
       currentMonthlyTotal,
     });
 
-    // Calculate new amounts after increase
+    // Calculate new amounts after increase, applying free_seats (grant) if any
+    // Free seats already absorbed by current seats reduce remaining free credits
+    const freeSeatsRemaining = Math.max(0, freeSeats - currentSeatQuantity);
+    const paidSeats = hasActiveGrant ? Math.max(0, quantity - freeSeatsRemaining) : quantity;
     const newSeatQuantity = currentSeatQuantity + quantity;
-    const increaseAmount = quantity * seatUnitPrice;
+    const increaseAmount = paidSeats * seatUnitPrice;
     const newSeatsAmount = newSeatQuantity * seatUnitPrice;
     const newMonthlyTotal = currentMonthlyTotal + increaseAmount;
 
@@ -173,9 +232,9 @@ serve(async (req) => {
     const totalDays = Math.max(1, (periodEnd - periodStart) / 86400);
     const remainingDays = Math.max(0, (periodEnd - now) / 86400);
 
-    // Pro-rata charge calculation
+    // Pro-rata charge calculation (only on paid seats)
     const proRataFraction = remainingDays / totalDays;
-    const proRataChargeCents = Math.round(seatUnitPrice * 100 * quantity * proRataFraction);
+    const proRataChargeCents = Math.round(seatUnitPrice * 100 * paidSeats * proRataFraction);
     const proRataCharge = proRataChargeCents / 100;
 
     // Next billing date
@@ -202,7 +261,10 @@ serve(async (req) => {
       
       // Increase details
       seatsToAdd: quantity,
-      increaseAmount, // Monthly increase
+      paidSeats,
+      freeSeats,
+      grantApplied: hasActiveGrant,
+      increaseAmount, // Monthly increase (paid seats only)
       
       // New state after increase
       newSeatQuantity,

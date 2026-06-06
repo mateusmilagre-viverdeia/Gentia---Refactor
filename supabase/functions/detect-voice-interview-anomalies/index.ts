@@ -163,8 +163,9 @@ async function detectAndStore(
       : Promise.resolve({ count: 0 }),
     supabaseAdmin
       .from("voice_interview_events")
-      .select("event_type, payload")
-      .eq("session_id", s.id),
+      .select("event_type, payload, created_at")
+      .eq("session_id", s.id)
+      .order("created_at", { ascending: true }),
     supabaseAdmin
       .from("interview_token_usage")
       .select("audio_input_seconds, audio_output_seconds, duration_seconds")
@@ -173,9 +174,10 @@ async function detectAndStore(
   ]);
 
   const responsesCount = (responsesRes as any)?.count ?? 0;
-  const events = (eventsRes.data as Array<{ event_type: string }>) ?? [];
+  const events = (eventsRes.data as Array<{ event_type: string; payload: any; created_at: string }>) ?? [];
   const counts: Record<string, number> = {};
   for (const e of events) counts[e.event_type] = (counts[e.event_type] ?? 0) + 1;
+
 
   const audioInput = Number((tokenRes.data as any)?.audio_input_seconds ?? 0);
   const audioOutput = Number((tokenRes.data as any)?.audio_output_seconds ?? 0);
@@ -294,6 +296,51 @@ async function detectAndStore(
       metrics: { dead_lettered: counts.response_save_dead_letter },
     });
   }
+
+  // Rule 8: conductor regression — next_turn voltou para um questionIndex
+  // menor que o anterior (wrap-around / loop). Bug crítico do orquestrador.
+  if (sessionType === "cultural") {
+    const turnEvents = events.filter(
+      (e) => e.event_type === "conductor_next_turn" || e.event_type === "conductor_turn_emitted",
+    );
+    let regressions = 0;
+    let lastQi = -1;
+    let lastPhase = "";
+    const samples: Array<{ from: number; to: number; phase: string }> = [];
+    for (const e of turnEvents) {
+      const p = (e.payload ?? {}) as Record<string, unknown>;
+      const qi = Number(p.questionIndex ?? p.question_index ?? -1);
+      const phase = String(p.phase ?? "");
+      const isFollowup = Boolean(p.isFollowup ?? p.is_followup);
+      if (qi < 0) continue;
+      if (
+        lastQi >= 0 &&
+        qi < lastQi &&
+        !isFollowup &&
+        lastPhase !== "closing" &&
+        phase !== "closing"
+      ) {
+        regressions++;
+        if (samples.length < 5) samples.push({ from: lastQi, to: qi, phase });
+      }
+      lastQi = qi;
+      lastPhase = phase;
+    }
+    if (regressions > 0) {
+      findings.push({
+        severity: "critical",
+        rule_code: "conductor_regression",
+        description:
+          regressions +
+          " regressão(ões) de questionIndex no conductor (next_turn voltou para uma pergunta anterior). Possível loop/wrap-around.",
+        suggestion:
+          "Revisar interview-conductor: garantir que coverage>=total força phase=closing e que questionIndex nunca diminui fora de followup.",
+        metrics: { regressions, samples },
+      });
+    }
+  }
+
+
 
   if (findings.length === 0) return 0;
 

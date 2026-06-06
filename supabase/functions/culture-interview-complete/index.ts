@@ -723,6 +723,14 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Sobrevive a disconnect do cliente: registra a execução completa como
+  // background work no Edge Runtime. Se o candidato fechar a aba enquanto a
+  // avaliação (LLM + score + update + cobrança) está rodando, o runtime
+  // continua processando até o fim em vez de cancelar no meio.
+  // Cliente conectado continua recebendo a mesma resposta síncrona de hoje.
+  const handlerPromise = (async (): Promise<Response> => {
+
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -1227,14 +1235,17 @@ serve(async (req) => {
         }
       }
 
-      // Level 3: workflow step cultural
+      // Level 3: workflow step cultural (FIX: tabela correta = recruitment_job_workflow_steps)
       if (!agentId) {
         const { data: workflowStep } = await supabase
-          .from('recruitment_workflow_steps')
+          .from('recruitment_job_workflow_steps')
           .select('agent_id')
           .eq('job_id', session.job_id)
           .eq('step_type', 'cultural')
           .eq('is_active', true)
+          .not('agent_id', 'is', null)
+          .order('position', { ascending: true })
+          .limit(1)
           .maybeSingle();
         if (workflowStep?.agent_id) {
           agentId = workflowStep.agent_id;
@@ -1242,13 +1253,14 @@ serve(async (req) => {
         }
       }
 
-      // Level 4: any active cultural agent for account
+      // Level 4: any active cultural/structured agent for account
+      // (seeded agents use type='structured', custom ones may use 'cultural')
       if (!agentId) {
         const { data: defaultAgent } = await supabase
           .from('recruitment_agents')
           .select('id')
           .eq('account_id', accountId)
-          .eq('type', 'cultural')
+          .in('type', ['cultural', 'structured'])
           .eq('is_active', true)
           .limit(1)
           .maybeSingle();
@@ -1258,12 +1270,20 @@ serve(async (req) => {
         }
       }
 
+      if (!agentId) {
+        log.error(`❌ No cultural agent could be resolved for session ${sessionId} (job=${session.job_id}, account=${accountId})`);
+      }
+
       if (agentId) {
         const { data: agentSettings } = await supabase
           .from('recruitment_agents')
-          .select('minimum_score, strictness_profile')
+          .select('minimum_score, strictness_profile, is_active')
           .eq('id', agentId)
           .maybeSingle();
+
+        if (agentSettings && (agentSettings as any).is_active === false) {
+          log.log(`⚠️ Resolved agent ${agentId} is inactive — using its settings anyway (already in use by session)`);
+        }
 
         if (agentSettings?.minimum_score != null) {
           const parsed = typeof agentSettings.minimum_score === 'number'
@@ -1414,7 +1434,10 @@ serve(async (req) => {
                 },
               },
               questionsUsed: { type: "array", items: { type: "number" } },
-              ...CRITERION_V2_EXTRA_PROPS,
+              evidenceCount: { type: "number" },
+              redFlagsDetected: { type: "array", items: { type: "string" } },
+              genericResponseDetected: { type: "boolean" },
+              confidenceLevel: { type: "string", enum: ["low", "medium", "high"] },
             },
             required: ["criterionId", "criterionName", "score", "justification", "alignmentLevel", "positiveEvidence", "negativeEvidence", "questionsUsed", "evidenceCount", "redFlagsDetected", "genericResponseDetected", "confidenceLevel"],
           },
@@ -1608,7 +1631,7 @@ serve(async (req) => {
       })),
       durationSeconds: finalDurationSeconds ?? null,
       responsesCount: parsedResponses.length,
-      totalScriptQuestionsCount: totalScriptQuestionsCount || 1,
+      totalScriptQuestionsCount: ((session as any).questions_total ?? (Array.isArray(session.questions) ? session.questions.length : 0) ?? parsedResponses.length) || 1,
       strictnessProfile,
     });
 
@@ -1701,7 +1724,12 @@ serve(async (req) => {
         // V2 transparency fields
         evidence_count: ev.evidenceCount ?? null,
         red_flags: ev.redFlagsDetected ?? [],
-        confidence_level: ev.confidenceLevel ?? null,
+        confidence_level: (() => {
+          const raw = String(ev.confidenceLevel ?? '').trim().toLowerCase();
+          // Normaliza variações PT antigas (cache do prompt) -> EN exigido pelo CHECK do banco
+          const map: Record<string, string> = { baixo: 'low', medio: 'medium', médio: 'medium', alto: 'high', low: 'low', medium: 'medium', high: 'high' };
+          return map[raw] ?? null;
+        })(),
         generic_response_detected: !!ev.genericResponseDetected,
         base_score: ev.score,
         penalty_applied: v2Impact?.penaltyApplied ?? 0,
@@ -1953,6 +1981,7 @@ serve(async (req) => {
         ai_messages: transcript ? [{ role: "transcript", content: transcript }] : [],
         responses: parsedResponses,
         matching_score: scoringResult.finalScore,
+        recommendation: scoringResult.recommendation,
         matching_analysis: fullAnalysis,
         duration_seconds: finalDurationSeconds,
         completed_at: completedAt.toISOString(),
@@ -1968,7 +1997,7 @@ serve(async (req) => {
         red_flags_count: v2Result.redFlagsCount,
         avg_confidence_level: v2Result.avgConfidenceLevel,
         evaluation_audit_trail: {
-          version: isSimulation ? 'v3' : (useV2 ? 'v2' : 'legacy'),
+          version: isTestSession ? 'v3' : (useV2 ? 'v2' : 'legacy'),
           strictness_profile: strictnessProfile,
           shadow_enabled: shadowConfig.shadowEnabled,
           legacy: {
@@ -2148,7 +2177,7 @@ Além disso:
           let hasDiscStep = false;
           try {
             const { data: discStep } = await supabase
-              .from('recruitment_workflow_steps')
+              .from('recruitment_job_workflow_steps')
               .select('id')
               .eq('job_id', session.job_id)
               .eq('step_type', 'disc')
@@ -2398,4 +2427,17 @@ Além disso:
       }
     );
   }
+  })();
+
+  // Registra como background work — runtime não cancela mesmo após disconnect.
+  try {
+    // @ts-ignore — global do Supabase Edge / Deno Deploy
+    if (typeof EdgeRuntime !== "undefined" && typeof EdgeRuntime.waitUntil === "function") {
+      // @ts-ignore
+      EdgeRuntime.waitUntil(handlerPromise);
+    }
+  } catch { /* fallback silencioso — comportamento atual */ }
+
+  return await handlerPromise;
 });
+

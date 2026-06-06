@@ -138,6 +138,20 @@ Deno.serve(async (req) => {
           if (invokeErr) {
             console.error("culture reprocess failed", s.id, invokeErr);
             summary.errors++;
+            // Persist the failure so it's not lost when edge logs expire.
+            const errMsg = (invokeErr as any)?.message || String(invokeErr);
+            await supabase.from("culture_interview_sessions").update({
+              metadata: { ...((s as any).metadata ?? {}), watchdog_reprocess_error: errMsg, watchdog_reprocess_error_at: new Date().toISOString() },
+            }).eq("id", s.id);
+            if (s.account_id) {
+              await supabase.from("voice_interview_events").insert({
+                account_id: s.account_id,
+                session_id: s.id,
+                session_type: "cultural",
+                event_type: "watchdog_reprocess_failed",
+                payload: { error: errMsg, source: "watchdog" },
+              });
+            }
           } else {
             summary.culture_partial_evaluated++;
           }

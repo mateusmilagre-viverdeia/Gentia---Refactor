@@ -2,6 +2,7 @@
 // Quando um candidato aplica para uma nova vaga, reaproveita Cultural/DISC já completos
 // (mesmo candidato, mesma empresa) clonando a sessão para a nova job_id.
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { resolveCulturalAgentId } from "../_shared/resolveCulturalAgent.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -66,10 +67,20 @@ Deno.serve(async (req) => {
 
       if (priorCulture) {
         const { id: _id, created_at: _c, updated_at: _u, started_at: _s, email_sent_at: _e, email_resend_count: _er, token: _t, ...rest } = priorCulture as any;
+        // Ensure agent_id is set even if prior session had null (Fase 2)
+        let agentId = (rest as any).agent_id || null;
+        if (!agentId) {
+          const resolved = await resolveCulturalAgentId(supabase, {
+            jobId: body.job_id,
+            accountId: body.account_id,
+          });
+          agentId = resolved.agentId;
+        }
         const { error: insErr } = await supabase
           .from("culture_interview_sessions")
           .insert({
             ...rest,
+            agent_id: agentId,
             job_id: body.job_id,
             reused_from_session_id: priorCulture.id,
             email_resend_count: 0,

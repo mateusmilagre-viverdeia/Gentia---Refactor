@@ -41,7 +41,12 @@ interface ConductorState {
   lastFollowup?: string | null;
   followupBucket?: FollowupBucket | null;
   closingVariant?: string | null;
+  // Anti-loop: quantas vezes o coverage_rescue redirecionou para cada qi.
+  // Após 2 tentativas no mesmo qi, força-incluir no coverage_log para
+  // permitir o closing (evita o bug do wrap-around em factuais curtas).
+  coverageRescueByQi?: Record<string, number>;
 }
+
 
 interface SessionQuestion {
   id?: string;
@@ -283,17 +288,17 @@ function chooseClosingVariant(m: ClosingMetrics): ClosingVariant {
 
 function buildClosingText(firstName: string, variant: ClosingVariant): string {
   // Sufixo fixo — não alterar (contrato com frontend).
-  const SUFFIX = "A entrevista foi finalizada e eu vou encerrar a nossa conexão agora. Até logo!";
+  const SUFFIX = "Quero lhe agradecer pelo seu tempo. Por favor, clique no botão Encerrar entrevista para finalizar a nossa conexão. Muito obrigada e até logo!";
   switch (variant) {
     case "rapida":
-      return `${firstName}, obrigada pelas respostas diretas e objetivas. Foi ótimo conversar. ${SUFFIX}`;
+      return `Pronto, chegamos ao final da entrevista. ${firstName}, obrigada pelas respostas diretas e objetivas. Foi ótimo conversar. ${SUFFIX}`;
     case "longa":
-      return `${firstName}, muito obrigada pelo tempo e pelos exemplos detalhados. Conversa muito rica. ${SUFFIX}`;
+      return `Pronto, chegamos ao final da entrevista. ${firstName}, muito obrigada pelo tempo e pelos exemplos detalhados. Conversa muito rica. ${SUFFIX}`;
     case "fluida":
-      return `${firstName}, obrigada pela conversa fluida. Foi um prazer. ${SUFFIX}`;
+      return `Pronto, chegamos ao final da entrevista. ${firstName}, obrigada pela conversa fluida. Foi um prazer. ${SUFFIX}`;
     case "padrao":
     default:
-      return `${firstName}, muito obrigada pela conversa! Foi um prazer conhecer você. ${SUFFIX}`;
+      return `Pronto, chegamos ao final da entrevista. ${firstName}, muito obrigada pela conversa! Foi um prazer conhecer você. ${SUFFIX}`;
   }
 }
 
@@ -436,12 +441,22 @@ async function computeNextTurn(
   // foram realmente cobertas. Se faltar alguma, redirecionar para a primeira
   // pendente em vez de encerrar. Evita encerramento precoce quando o índice
   // avança mas o coverage_log não consolida (resposta curta, follow-up, etc).
+  //
+  // ANTI-LOOP: cada qi só pode ser "resgatado" no máximo 2 vezes. Se passar
+  // disso, a pergunta é considerada efetivamente coberta e o gate libera o
+  // closing. Sem isso, factuais com resposta curta ficavam fora do log e o
+  // gate redirecionava infinitamente (bug Aline 01/jun, sessão wrap-around).
   const coverageLogArr = Array.isArray(s.coverage_log)
     ? (s.coverage_log as Array<{ question_index: number }>)
     : [];
   const coveredSetGate = new Set(coverageLogArr.map((c) => c.question_index));
+  const rescueByQi: Record<string, number> = { ...(prevState.coverageRescueByQi ?? {}) };
+  const MAX_RESCUE_PER_QI = 2;
+  const isExhausted = (i: number) => (rescueByQi[String(i)] ?? 0) >= MAX_RESCUE_PER_QI;
+  // qis "efetivamente cobertos" = no coverage_log OU já tentamos resgatar 2x.
+  const effectivelyCovered = (i: number) => coveredSetGate.has(i) || isExhausted(i);
   const firstMissingIndex = (): number => {
-    for (let i = 0; i < total; i++) if (!coveredSetGate.has(i)) return i;
+    for (let i = 0; i < total; i++) if (!effectivelyCovered(i)) return i;
     return -1;
   };
 
@@ -458,6 +473,7 @@ async function computeNextTurn(
   // Closing variant (B2) é calculado uma vez quando precisamos da fala de fechamento.
   let closingVariant: ClosingVariant | null = null;
   const coverageLogTyped = (s.coverage_log ?? []) as Array<{ question_index: number; match_source?: string | null }>;
+
 
   if (phase === "opening") {
     say = buildOpening(firstName, companyName);
@@ -483,7 +499,7 @@ async function computeNextTurn(
       phase = "asking";
     }
   } else if (phase === "asking") {
-    if (qi >= total && coveredSetGate.size < total) {
+    if (qi >= total && firstMissingIndex() >= 0) {
       // Coverage gate: índice estourou mas faltam perguntas. Volta para a
       // primeira pendente em vez de encerrar.
       const miss = firstMissingIndex();
@@ -494,6 +510,7 @@ async function computeNextTurn(
       say = c.text;
       closingVariant = c.variant;
       phase = "closing";
+
     } else if (coverageRescue) {
       const expansion = expandLabel(questions[qi].question_text);
       say = `Antes de encerrarmos, faltou uma pergunta. ${expansion.expanded}`;
@@ -519,8 +536,9 @@ async function computeNextTurn(
     say = pickFollowupByBucket(turnId, bucket, prevState.lastFollowup ?? null);
     isFollowup = true;
   } else if (phase === "closing") {
-    // Última linha de defesa: se ainda há perguntas não cobertas, NÃO encerra.
-    if (coveredSetGate.size < total) {
+    // Última linha de defesa: se ainda há perguntas não cobertas E não excedeu
+    // o budget de rescue, NÃO encerra.
+    if (firstMissingIndex() >= 0) {
       const miss = firstMissingIndex();
       if (miss >= 0) {
         qi = miss;
@@ -535,6 +553,7 @@ async function computeNextTurn(
         phase = "done";
       }
     } else if (prevState.phase === "closing") {
+
       // Se já estávamos em closing e viemos para o computeNextTurn de novo,
       // significa que o turno de fala da despedida já foi disparado/commitado.
       // Agora sim, encerramos a conexão.
@@ -554,8 +573,13 @@ async function computeNextTurn(
   }
 
   if (coverageRescue) {
+    // Incrementa o contador para o qi resgatado. Após MAX_RESCUE_PER_QI,
+    // `effectivelyCovered(qi)` vira true e o gate libera o closing.
+    const key = String(qi);
+    rescueByQi[key] = (rescueByQi[key] ?? 0) + 1;
     console.log("[conductor] coverage_rescue", {
       sessionId, covered: coveredSetGate.size, total, redirectedTo: qi,
+      rescueAttempt: rescueByQi[key], cap: MAX_RESCUE_PER_QI,
     });
   }
 
@@ -582,7 +606,9 @@ async function computeNextTurn(
     lastFollowup: newLastFollowup,
     followupBucket: prevState.followupBucket ?? null,
     closingVariant: closingVariant ?? prevState.closingVariant ?? null,
+    coverageRescueByQi: rescueByQi,
   };
+
 
   if (!speculative) {
     const updates: Record<string, unknown> = {
@@ -846,13 +872,19 @@ async function persistTurn(
 
   const existingLog = Array.isArray(s.coverage_log) ? s.coverage_log : [];
   const covered = new Set(existingLog.map((c) => c.question_index));
-  const realResponse = wordCount(transcript) > 2;
+  const wcEarly = wordCount(transcript);
+  const factualEarly = isFactualQuestion(rawQuestionText);
+  // realResponse: respostas substantivas (>2 palavras) entram no coverage_log.
+  // Mas para perguntas factuais (Nome, Idade, Cidade...) a resposta é
+  // naturalmente curta (1-2 palavras) e VÁLIDA. Se não contássemos, o
+  // gate de cobertura no closing entraria em loop infinito (bug Aline 01/jun).
+  const isAcceptable = wcEarly > 2 || (factualEarly && wcEarly >= 1);
   let updatedLog = existingLog;
   // Cobertura consolida tanto na pergunta principal ("asking") quanto em
   // follow-ups substantivos. Sem isso, perguntas que só receberam resposta
   // útil no follow-up ficavam fora do coverage_log e o índice avançava
   // levando a um encerramento precoce.
-  if ((phase === "asking" || phase === "followup") && realResponse && !covered.has(qi)) {
+  if ((phase === "asking" || phase === "followup") && isAcceptable && !covered.has(qi)) {
     updatedLog = [
       ...existingLog,
       {
@@ -866,12 +898,13 @@ async function persistTurn(
   }
 
 
+
   let nextPhase: Phase;
   let nextQi = qi;
   let nextFu = s.current_followup_count ?? 0;
   let nextFollowupBucket: FollowupBucket | null = null;
-  const wc = wordCount(transcript);
-  const factual = isFactualQuestion(rawQuestionText);
+  const wc = wcEarly;
+  const factual = factualEarly;
   if (phase === "asking" && !factual && wc < SHORT_RESPONSE_WORDS && nextFu < MAX_FOLLOWUPS_PER_QUESTION) {
     nextPhase = "followup";
     nextFollowupBucket = chooseFollowupBucket(transcript, nextFu);
@@ -881,6 +914,7 @@ async function persistTurn(
     nextFu = 0;
     nextPhase = nextQi >= total ? "closing" : "asking";
   }
+
 
   const newCoveredCount = updatedLog.length;
   const { error: sessUpdErr } = await supabase
@@ -901,7 +935,9 @@ async function persistTurn(
         lastFollowup: state.lastFollowup ?? null,
         followupBucket: nextFollowupBucket,
         closingVariant: state.closingVariant ?? null,
+        coverageRescueByQi: state.coverageRescueByQi ?? {},
       } satisfies ConductorState,
+
       coverage_log: updatedLog,
       questions_covered: newCoveredCount,
       questions_total: total,
