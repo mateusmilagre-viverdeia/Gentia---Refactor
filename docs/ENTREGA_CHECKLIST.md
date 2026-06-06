@@ -17,7 +17,7 @@
 | b) Observabilidade | ✅ Completa (resta config de cutover) | ~90% |
 | c) Banco de Dados | 🟡 Núcleo feito; falta doc técnica + mapa de tabelas | ~70% |
 | d) Backup e Recuperação | ⬜ Pendente | 0% |
-| e) Infraestrutura e Escalabilidade | 🟡 Recomendações no relatório; falta implementar | ~20% |
+| e) Infraestrutura e Escalabilidade | 🟡 `INFRA_ESCALA.md`: pooling + cache (impl.) + review + fallback; compute/slow-query no cutover | ~70% |
 | f) Otimização de LLMs | 🟡 Inventário + recomendação + plano (`LLM_AUDIT.md`); impl. e R$/mês no cutover | ~60% |
 | g) Entregáveis (artefatos) | 🟡 Em progresso | ~60% |
 
@@ -62,14 +62,14 @@
 - [⬜] Teste/simulação documentada de recuperação
 - [⬜] Definição de RPO/RTO
 
-## e) Infraestrutura e Escalabilidade — 🟡 RECOMENDADO, FALTA IMPLEMENTAR
-- [🟡] Connection pooling (Supavisor) → recomendado em `PERFORMANCE_AUDIT.md §5`; falta configurar/documentar
-- [⬜] Ajuste de configs do Supabase p/ maior volume (>40 empresas)
-- [⬜] Otimização das Edge Functions
-- [⬜] Cache nos pontos críticos
-- [⬜] Revisão dos fluxos frontend ↔ Supabase ↔ Edge ↔ banco ↔ IA
-- [⬜] Lista documentada de Edge Functions revisadas/otimizadas
-- [⬜] Estratégia de fallback/rollback p/ mudanças críticas
+## e) Infraestrutura e Escalabilidade — 🟡 documentado + cache implementado · `docs/INFRA_ESCALA.md`
+- [x] Connection pooling → §1: functions usam REST (pooled); Supavisor 6543 (transaction) p/ acesso direto. Diagnóstico: 0 functions em PG direto, 12/90 conexões.
+- [🟡] Ajuste de configs p/ maior volume → §5: plano de compute + gatilhos (CPU/RAM/conexões); aplicar dimensionamento no cutover
+- [x] Otimização das Edge Functions → §3 (review + cache + correções de IA/segurança)
+- [x] Cache nos pontos críticos → §2: **implementado** em `getConfiguredModel` (24 functions, TTL 60s) + padrão p/ estender
+- [x] Revisão dos fluxos frontend ↔ Supabase ↔ Edge ↔ banco ↔ IA → §3
+- [x] Lista documentada de Edge Functions revisadas/otimizadas → §3
+- [x] Estratégia de fallback/rollback → §4 (flag de IA OFF, config sem deploy, migrations idempotentes, deploy versionado, PITR)
 
 ## f) Otimização de LLMs (Custo-Benefício) — 🟡 análise/plano feitos · `docs/LLM_AUDIT.md`
 - [x] Análise do uso atual de LLMs → `LLM_AUDIT.md §1-2` (inventário feature×modelo×tokens, real)
@@ -88,7 +88,7 @@
 - [⬜] Documentação técnica completa do banco (ver c)
 - [x] Lista de tabelas revisadas e RLS ajustadas → `SECURITY_AUDIT.md`
 - [x] Evidência de teste de isolamento multi-tenant → `SECURITY_AUDIT.md §9`
-- [🟡] Lista de Edge Functions revisadas/corrigidas/otimizadas → segurança feita; otimização (frente e) pendente
+- [x] Lista de Edge Functions revisadas/corrigidas/otimizadas → `INFRA_ESCALA.md §3` (segurança + cache + IA)
 - [🟡] Dashboards de observabilidade configurados → `OBSERVABILITY.md` + views/RPC
 - [⬜] Plano de backup e recuperação (ver d)
 - [x] Runbook básico de resposta a incidentes → `RUNBOOK_INCIDENTES.md`
