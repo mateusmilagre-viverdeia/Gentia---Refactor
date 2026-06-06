@@ -120,3 +120,10 @@ Estender o wrapper para, em **timeout / JSON quebrado / 5xx / indisponibilidade 
 - Implementar a reescrita do wrapper (§6) + testar feature a feature com as keys diretas.
 - Definir as cadeias de fallback por feature (§7).
 - A/B de qualidade (Gemini×Claude) nos pareceres antes de virar 100%.
+
+## 10. Validação com dados reais (2026-06-06)
+Cliente carregou dados reais no destino (59 empresas, 181 candidatos, 124 candidaturas, 193 usuários, **113 logs de IA**, 73 MB):
+- **Integridade ✅** RLS 416/416, 0 tabelas sem policy, 0 FKs órfãs. **Isolamento multi-tenant PROVADO em contas reais** (usuário comum vê só a própria conta — A:105/0, B:31/0; `super_admin`+`head_cs` vê tudo **por design**; anon:0). Advisor de segurança **0 ERROR**.
+- **🔴→✅ Confiabilidade do parecer:** os logs revelaram que `culture-interview-complete` falhou **~62%** no período em que usou modelos **"pro"** (gemini-2.5-pro **0%** ok; gemini-3-pro-preview ~20%) com erro "no tool_call"; os **flash funcionam 100%**. **Já mitigado em produção** (`current_model`=gemini-3-flash-preview desde ~25/mai; últimas 10 execuções 100% ok) e **blindado contra regressão** (commit `1ae8101`: default+fallback → flash; `default_model` da config → flash).
+- **Volume/custo:** logs de IA poucos e concentrados em entrevistas (113 em 24 dias) → volume logado baixo (ou nem toda chamada é instrumentada). **A economia em R$ depende da fatura real do Lovable** — o maior ganho neste dataset é **confiabilidade + qualidade**, não custo absoluto.
+- **Recomendação reforçada:** Claude nos pareceres não é só qualidade — é a opção **mais confiável** de tool-calling (os modelos "pro" do Google quebram no schema grande). No cutover, Claude entra como primary/fallback cross-provider do parecer.
