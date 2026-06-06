@@ -16,7 +16,7 @@
 | a) Segurança | ✅ **Completa** | 100% |
 | b) Observabilidade | ✅ Completa (resta config de cutover) | ~90% |
 | c) Banco de Dados | 🟡 Núcleo feito; falta doc técnica + mapa de tabelas | ~70% |
-| d) Backup e Recuperação | ⬜ Pendente | 0% |
+| d) Backup e Recuperação | 🟡 `BACKUP_DR.md`: 7 backups/dia + WAL-G; RPO/RTO + DR + restore doc; PITR (decisão custo) e teste real no cutover | ~70% |
 | e) Infraestrutura e Escalabilidade | 🟡 `INFRA_ESCALA.md`: pooling + cache (impl.) + review + fallback; compute/slow-query no cutover | ~70% |
 | f) Otimização de LLMs | 🟡 Inventário + recomendação + plano (`LLM_AUDIT.md`); impl. e R$/mês no cutover | ~60% |
 | g) Entregáveis (artefatos) | 🟡 Em progresso | ~60% |
@@ -55,12 +55,12 @@
 - [🟡] Evidência de performance antes/depois → advisor 2664→1476; **antes/depois por query no cutover**
 - [x] Plano técnico de escala 12 meses → `PERFORMANCE_AUDIT.md §5`
 
-## d) Backup e Recuperação — ⬜ PENDENTE
-- [⬜] Rotinas de backups automáticos (PITR no plano Pro) → verificar/configurar/documentar
-- [⬜] Testes de integridade dos backups
-- [⬜] Plano de recuperação de desastres (DR)
-- [⬜] Teste/simulação documentada de recuperação
-- [⬜] Definição de RPO/RTO
+## d) Backup e Recuperação — 🟡 documentado · `docs/BACKUP_DR.md`
+- [x] Rotinas de backups automáticos → §1: **7 backups diários ativos** + WAL-G. PITR a habilitar (decisão de custo do cliente, ~US$100/mês, recomendado).
+- [🟡] Testes de integridade dos backups → §4: simulação lógica feita (integridade validada com dados reais); **teste de restore real em clone** no cutover
+- [x] Plano de recuperação de desastres (DR) → §3 (cenários + resposta + ligação ao runbook)
+- [x] Teste/simulação documentada de recuperação → §4 (procedimento passo-a-passo; executar em clone no cutover)
+- [x] Definição de RPO/RTO → §2 (hoje: RPO ≤24h / RTO min; com PITR: RPO ~2min)
 
 ## e) Infraestrutura e Escalabilidade — 🟡 documentado + cache implementado · `docs/INFRA_ESCALA.md`
 - [x] Connection pooling → §1: functions usam REST (pooled); Supavisor 6543 (transaction) p/ acesso direto. Diagnóstico: 0 functions em PG direto, 12/90 conexões.
@@ -90,7 +90,7 @@
 - [x] Evidência de teste de isolamento multi-tenant → `SECURITY_AUDIT.md §9`
 - [x] Lista de Edge Functions revisadas/corrigidas/otimizadas → `INFRA_ESCALA.md §3` (segurança + cache + IA)
 - [🟡] Dashboards de observabilidade configurados → `OBSERVABILITY.md` + views/RPC
-- [⬜] Plano de backup e recuperação (ver d)
+- [x] Plano de backup e recuperação → `docs/BACKUP_DR.md`
 - [x] Runbook básico de resposta a incidentes → `RUNBOOK_INCIDENTES.md`
 - [x] Análise comparativa de LLMs com recomendação → `docs/LLM_AUDIT.md`
 - [⬜] Guia de boas práticas para desenvolvimento de novas funcionalidades
@@ -98,7 +98,7 @@
 - [⬜] Reunião de handoff ao término
 
 ## h) Critérios de Aceite (libera 2ª parcela) — espelho dos itens acima
-✅ Relatório antes/depois · ⬜ Banco documentado · 🟡 Queries críticas otimizadas · ✅ RLS revisado nas críticas · ✅ Isolamento testado e documentado · 🟡 Secrets/variáveis revisados · ✅ Edge Functions críticas revisadas · ✅ Logs e alertas configurados · 🟡 Dashboards mínimos ativos · ✅ Mapeamento de chamadas LLM · ✅ Recomendações de modelos documentadas · ⬜ Plano de backup entregue · ⬜ Reunião de handoff.
+✅ Relatório antes/depois · ⬜ Banco documentado · 🟡 Queries críticas otimizadas · ✅ RLS revisado nas críticas · ✅ Isolamento testado e documentado · 🟡 Secrets/variáveis revisados · ✅ Edge Functions críticas revisadas · ✅ Logs e alertas configurados · 🟡 Dashboards mínimos ativos · ✅ Mapeamento de chamadas LLM · ✅ Recomendações de modelos documentadas · ✅ Plano de backup entregue · ⬜ Reunião de handoff.
 
 ## i) FORA do escopo (não fazer — proposta apartada)
 Novas funcionalidades · suporte pós-garantia · redesign UX/UI · novos módulos · **refatoração completa do front** · **migração completa p/ outra cloud/banco** · fine-tuning de IA próprio · agente de IA do zero · **pentest formal certificado** · **auditoria jurídica de LGPD** · suporte 24/7 · correção de bugs fora das frentes.
