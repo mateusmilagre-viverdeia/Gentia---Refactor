@@ -16,9 +16,9 @@ interface PortalDashboardProps {
 
 export function PortalDashboard({ auth, onViewShortlist }: PortalDashboardProps) {
   const [tab, setTab] = useState("vagas");
-  const { data: jobs = [], isLoading: loadingJobs } = usePortalJobsRealtime(auth.client.id, auth.accountId);
-  const { data: candidates = [], isLoading: loadingCandidates } = usePortalCandidates(auth.client.id);
-  const { data: feedbacks = [] } = usePortalFeedbacks(auth.client.id);
+  const { data: jobs = [], isLoading: loadingJobs } = usePortalJobsRealtime(auth.access.token_acesso, auth.client.id);
+  const { data: candidates = [], isLoading: loadingCandidates } = usePortalCandidates(auth.access.token_acesso);
+  const { data: feedbacks = [] } = usePortalFeedbacks(auth.access.token_acesso);
 
   const activeJobs = jobs.filter((j: any) => j.status === "active");
   const token = auth.access.token_acesso;

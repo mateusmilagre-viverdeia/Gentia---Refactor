@@ -8,7 +8,6 @@ import { ShortlistCandidateCard } from "./ShortlistCandidateCard";
 import { FeedbackDialog } from "./FeedbackDialog";
 import { usePortalShortlist, usePortalFeedbacks, useSubmitFeedback } from "@/hooks/usePortalData";
 import { supabase } from "@/integrations/supabase/client";
-import { sendWhatsAppMessage } from "@/lib/whatsapp/sendWhatsAppMessage";
 import { toast } from "sonner";
 import type { PortalAuthData } from "@/hooks/usePortalAuth";
 
@@ -20,8 +19,8 @@ interface PortalShortlistViewProps {
 }
 
 export function PortalShortlistView({ auth, jobId, jobTitle, onBack }: PortalShortlistViewProps) {
-  const { data: shortlist = [], isLoading } = usePortalShortlist(jobId);
-  const { data: feedbacks = [] } = usePortalFeedbacks(auth.client.id);
+  const { data: shortlist = [], isLoading } = usePortalShortlist(auth.access.token_acesso, jobId);
+  const { data: feedbacks = [] } = usePortalFeedbacks(auth.access.token_acesso);
   const submitFeedback = useSubmitFeedback();
 
   const [feedbackDialog, setFeedbackDialog] = useState<{
@@ -41,11 +40,9 @@ export function PortalShortlistView({ auth, jobId, jobTitle, onBack }: PortalSho
   const handleFeedback = (candidateId: string, candidateName: string, decisao: string) => {
     if (decisao === "aprovado") {
       submitFeedback.mutate({
-        account_id: auth.accountId,
+        token: auth.access.token_acesso,
         vaga_id: jobId,
         candidato_id: candidateId,
-        cliente_id: auth.client.id,
-        contato_id: auth.contact?.id,
         decisao: "aprovado",
       });
     } else {
@@ -55,11 +52,9 @@ export function PortalShortlistView({ auth, jobId, jobTitle, onBack }: PortalSho
 
   const handleSubmitRejection = (motivo: string) => {
     submitFeedback.mutate({
-      account_id: auth.accountId,
+      token: auth.access.token_acesso,
       vaga_id: jobId,
       candidato_id: feedbackDialog.candidateId,
-      cliente_id: auth.client.id,
-      contato_id: auth.contact?.id,
       decisao: "reprovado",
       motivo: motivo || undefined,
     });
@@ -72,22 +67,13 @@ export function PortalShortlistView({ auth, jobId, jobTitle, onBack }: PortalSho
 
   const sendMessageToRecruiter = async (message: string, type: "mais_candidatos" | "duvida") => {
     try {
-      // Get job's account owner phone
-      const { data: job } = await supabase.from("recruitment_jobs").select("account_id, title").eq("id", jobId).maybeSingle();
-      if (!job) return;
-      const { data: members } = await supabase.from("account_members").select("user_id, role").eq("account_id", job.account_id);
-      const owner = (members || []).find(m => m.role === "owner") || (members || [])[0];
-      if (!owner?.user_id) return;
-      const empRes: { data: any } = await (supabase as any).from("employees").select("phone").eq("user_id", owner.user_id).maybeSingle();
-      if (!empRes.data?.phone) return;
-
-      const prefix = type === "mais_candidatos"
-        ? `📋 O cliente "${auth.client.razao_social}" solicitou mais candidatos para a vaga "${job.title}"`
-        : `❓ O cliente "${auth.client.razao_social}" tem uma dúvida sobre a vaga "${job.title}"`;
-
-      await sendWhatsAppMessage({
-        toPhoneE164: empRes.data.phone,
-        message: `${prefix}:\n\n"${message}"`,
+      // Telefone/destinatário e o envio ficam no SERVIDOR (portal-data → whatsapp-send).
+      await supabase.functions.invoke("portal-data", {
+        body: {
+          token: auth.access.token_acesso,
+          resource: "notify_recruiter",
+          params: { jobId, message, type },
+        },
       });
     } catch {
       // best effort

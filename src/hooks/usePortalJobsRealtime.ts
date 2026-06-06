@@ -8,8 +8,8 @@ import { usePortalJobs } from "./usePortalData";
  * Extends usePortalJobs with realtime subscription on recruitment_applications.
  * Invalidates queries on UPDATE/INSERT for jobs of this client.
  */
-export const usePortalJobsRealtime = (clienteId: string | undefined, accountId: string | undefined) => {
-  const query = usePortalJobs(clienteId, accountId);
+export const usePortalJobsRealtime = (token: string | undefined, clienteId: string | undefined) => {
+  const query = usePortalJobs(token);
   const queryClient = useQueryClient();
   const jobs = query.data || [];
   const jobIds = jobs.map((j: any) => j.id).filter(Boolean);
@@ -29,8 +29,8 @@ export const usePortalJobsRealtime = (clienteId: string | undefined, accountId: 
           filter: `job_id=in.(${jobIds.join(",")})`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ["portal-jobs", clienteId] });
-          queryClient.invalidateQueries({ queryKey: ["portal-candidates", clienteId] });
+          queryClient.invalidateQueries({ queryKey: ["portal-jobs", token] });
+          queryClient.invalidateQueries({ queryKey: ["portal-candidates", token] });
           queryClient.invalidateQueries({ queryKey: ["portal-funnel-counts"] });
         }
       )
@@ -61,7 +61,7 @@ export const usePortalJobsRealtime = (clienteId: string | undefined, accountId: 
       supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clienteId, jobIdsKey]);
+  }, [clienteId, token, jobIdsKey]);
 
   return query;
 };

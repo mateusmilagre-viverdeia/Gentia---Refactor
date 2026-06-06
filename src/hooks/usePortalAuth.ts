@@ -47,57 +47,31 @@ export const usePortalAuth = (token: string | undefined) => {
     }
 
     try {
-      // Lookup portal access by token
-      const { data: accessData, error: accessError } = await supabase
-        .from("portal_clientes_acesso")
-        .select("*")
-        .eq("token_acesso", token)
-        .eq("ativo", true)
-        .single();
+      // Valida o token e busca os dados no SERVIDOR (portal-data) — sem SELECT direto
+      // às tabelas (que exigia acesso anônimo e vazava PII). O servidor escopa por token.
+      const { data: result, error: fnError } = await supabase.functions.invoke("portal-data", {
+        body: { token, resource: "auth" },
+      });
 
-      if (accessError || !accessData) {
-        setError("Acesso inválido ou expirado");
+      const r = result as {
+        error?: string;
+        access?: Omit<PortalAccess, "token_acesso" | "ultimo_acesso" | "ativo">;
+        client?: PortalClient;
+        contact?: PortalContact | null;
+        accountId?: string;
+      } | null;
+
+      if (fnError || !r || r.error || !r.access || !r.client) {
+        setError(r?.error || "Acesso inválido ou expirado");
         setIsLoading(false);
         return;
       }
-
-      const access = accessData as PortalAccess;
-
-      // Fetch client data
-      const { data: clientData, error: clientError } = await supabase
-        .from("clientes_consultoria")
-        .select("id, razao_social, nome_fantasia, logo_url, status")
-        .eq("id", access.cliente_id)
-        .single();
-
-      if (clientError || !clientData) {
-        setError("Cliente não encontrado");
-        setIsLoading(false);
-        return;
-      }
-
-      // Fetch contact data if available
-      let contact: PortalContact | null = null;
-      if (access.contato_id) {
-        const { data: contactData } = await supabase
-          .from("clientes_contatos")
-          .select("id, nome, cargo, email")
-          .eq("id", access.contato_id)
-          .single();
-        contact = contactData as PortalContact | null;
-      }
-
-      // Update ultimo_acesso
-      await supabase
-        .from("portal_clientes_acesso")
-        .update({ ultimo_acesso: new Date().toISOString() })
-        .eq("id", access.id);
 
       setData({
-        access,
-        client: clientData as PortalClient,
-        contact,
-        accountId: access.account_id,
+        access: { ...r.access, token_acesso: token, ultimo_acesso: null, ativo: true },
+        client: r.client,
+        contact: r.contact ?? null,
+        accountId: r.accountId ?? r.access.account_id,
       });
     } catch (err) {
       setError("Erro ao validar acesso");

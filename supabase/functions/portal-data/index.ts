@@ -126,6 +126,36 @@ serve(async (req) => {
         if (error) return json({ error: error.message }, 400);
         return json(data);
       }
+      case "notify_recruiter": {
+        // "Preciso de mais candidatos" / "Tenho dúvidas": notifica o recrutador por
+        // WhatsApp. Telefone e destinatário ficam SEMPRE no servidor (não vão ao client).
+        const jobId = (params as any)?.jobId;
+        const message = (params as any)?.message;
+        const type = (params as any)?.type;
+        if (!jobId || !message) return json({ error: "jobId e message são obrigatórios" }, 400);
+        const { data: job } = await supabase.from("recruitment_jobs")
+          .select("account_id, title, cliente_id").eq("id", jobId).maybeSingle();
+        if (!job || job.cliente_id !== clienteId) return json({ error: "Vaga não pertence a este portal" }, 403);
+        const { data: members } = await supabase.from("account_members")
+          .select("user_id, role").eq("account_id", access.account_id);
+        const owner = (members ?? []).find((m: any) => m.role === "owner") ?? (members ?? [])[0];
+        if (!owner?.user_id) return json({ ok: false, reason: "sem destinatário" });
+        const { data: emp } = await supabase.from("employees")
+          .select("phone").eq("user_id", owner.user_id).maybeSingle();
+        if (!emp?.phone) return json({ ok: false, reason: "sem telefone" });
+        const { data: cli } = await supabase.from("clientes_consultoria")
+          .select("razao_social").eq("id", clienteId).maybeSingle();
+        const clientName = cli?.razao_social ?? "Cliente";
+        const prefix = type === "duvida"
+          ? `❓ O cliente "${clientName}" tem uma dúvida sobre a vaga "${job.title}"`
+          : `📋 O cliente "${clientName}" solicitou mais candidatos para a vaga "${job.title}"`;
+        await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-send`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
+          body: JSON.stringify({ provider: "zapi", toPhoneE164: emp.phone, message: `${prefix}:\n\n"${message}"` }),
+        }).catch(() => { /* best effort */ });
+        return json({ ok: true });
+      }
       default:
         return json({ error: `resource desconhecido: ${resource}` }, 400);
     }
