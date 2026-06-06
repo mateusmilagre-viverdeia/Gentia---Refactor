@@ -32,6 +32,7 @@ Fase 1 (R$6k / 45 dias): estruturação de **Segurança, Banco, Infra/Escala, LL
 - **Tokens que circularam em chat/arquivo** → rotacionar no go-live.
 
 ## 5. Próxima fase — CUTOVER (checklist)
+> **Roteiro executável completo (comandos, gates de validação e rollback): `docs/RUNBOOK_CUTOVER.md`.**
 1. **Dados + secrets reais** de produção → destino; rotacionar `CRON_SECRET` (hoje é de teste) e tokens expostos.
 2. **Ativar IA direta:** popular `GEMINI_API_KEY` real → `LLM_DIRECT_PROVIDERS=true` → redeploy → validar feature a feature → fechar a economia real com a fatura do Lovable.
 3. **Habilitar PITR** (RPO 24h → ~2min) + **teste de restore real** em clone (cronometrar RTO).
@@ -41,7 +42,7 @@ Fase 1 (R$6k / 45 dias): estruturação de **Segurança, Banco, Infra/Escala, LL
 7. **Dimensionar compute** + slow-query pass (`pg_stat_statements`) + consolidar policies nas tabelas quentes.
 
 ## 6. Índice da documentação (handoff)
-`ENTREGA_CHECKLIST.md` (aceite) · `SECURITY_AUDIT.md` · `RUNBOOK_INCIDENTES.md` · `PERFORMANCE_AUDIT.md` · `BANCO_DADOS.md` · `OBSERVABILITY.md` · `INFRA_ESCALA.md` · `BACKUP_DR.md` · `LLM_AUDIT.md` · `PLANO_EFICIENCIA_OPERACAO.md` · `SECRETS_INVENTORY.md` · `GUIA_BOAS_PRATICAS.md` · `CLAUDE.md` (contexto-mestre).
+`ENTREGA_CHECKLIST.md` (aceite) · `SECURITY_AUDIT.md` · `RUNBOOK_INCIDENTES.md` · `PERFORMANCE_AUDIT.md` · `BANCO_DADOS.md` · `OBSERVABILITY.md` · `INFRA_ESCALA.md` · `BACKUP_DR.md` · `LLM_AUDIT.md` · `PLANO_EFICIENCIA_OPERACAO.md` · `SECRETS_INVENTORY.md` · `GUIA_BOAS_PRATICAS.md` · **`RUNBOOK_CUTOVER.md`** (go-live) · `CLAUDE.md` (contexto-mestre).
 
 ## 7. Reunião de handoff (pauta sugerida)
 Visão geral das 6 frentes → demonstração (advisor 0 ERROR, isolamento, métricas/alertas) → economia de IA + plano Claude → **plano de cutover** (seção 5) → riscos e decisões pendentes (PITR, secrets, front) → Q&A.
