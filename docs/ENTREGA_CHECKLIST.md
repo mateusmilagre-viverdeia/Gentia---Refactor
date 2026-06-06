@@ -18,7 +18,7 @@
 | c) Banco de Dados | 🟡 Núcleo feito; falta doc técnica + mapa de tabelas | ~70% |
 | d) Backup e Recuperação | ⬜ Pendente | 0% |
 | e) Infraestrutura e Escalabilidade | 🟡 Recomendações no relatório; falta implementar | ~20% |
-| f) Otimização de LLMs | 🟡 Base/inventário parcial; **próximo foco** | ~20% |
+| f) Otimização de LLMs | 🟡 Inventário + recomendação + plano (`LLM_AUDIT.md`); impl. e R$/mês no cutover | ~60% |
 | g) Entregáveis (artefatos) | 🟡 Em progresso | ~60% |
 
 ---
@@ -71,17 +71,17 @@
 - [⬜] Lista documentada de Edge Functions revisadas/otimizadas
 - [⬜] Estratégia de fallback/rollback p/ mudanças críticas
 
-## f) Otimização de LLMs (Custo-Benefício) — 🟡 PRÓXIMO FOCO
-- [🟡] Análise do uso atual de LLMs → base: `ai_execution_logs`, `v_ops_ai_by_model`, 90 functions usando `LOVABLE_API_KEY` mapeadas
-- [⬜] Avaliação de modelos/provedores (custo × desempenho)
-- [⬜] Otimização de prompts e consumo de tokens
-- [⬜] Cache de respostas + fallback entre modelos (existe cache de contexto Gemini parcial)
-- [⬜] Projeção de custo por escala
-- [🟡] Mapeamento das chamadas LLM por fluxo → `feature_llm_mapping` + `v_ops_ai_by_function`
-- [⬜] Recomendação de modelo/provedor por tipo de tarefa (incl. **Claude**)
-- [⬜] Comparativo custo atual × projetado
-- [⬜] Fallback p/ falhas de LLM (timeout, JSON quebrado, indisponibilidade, custo anormal)
-- [⬜] **Desacoplar Lovable Gateway → provedores diretos (Google/OpenAI/Anthropic)**
+## f) Otimização de LLMs (Custo-Benefício) — 🟡 análise/plano feitos · `docs/LLM_AUDIT.md`
+- [x] Análise do uso atual de LLMs → `LLM_AUDIT.md §1-2` (inventário feature×modelo×tokens, real)
+- [x] Avaliação de modelos/provedores (custo × desempenho) → §4-5 (preços oficiais Claude + recomendação)
+- [🟡] Otimização de prompts e consumo de tokens → §8 (caching/right-sizing documentados; aplicar na impl.)
+- [🟡] Cache de respostas + fallback entre modelos → §7-8 (desenhado; implementar com a reescrita)
+- [🟡] Projeção de custo por escala → §5 (custo/chamada pronto; R$/mês total no cutover c/ volume real)
+- [x] Mapeamento das chamadas LLM por fluxo → §2 (`feature_llm_mapping` + `v_ops_ai_by_function`)
+- [x] Recomendação de modelo/provedor por tipo de tarefa (incl. **Claude**) → §5
+- [🟡] Comparativo custo atual × projetado → §3-5 (framework + premissas; total no cutover)
+- [🟡] Fallback p/ falhas de LLM → §7 (cadeias por feature desenhadas; implementar)
+- [🟡] **Desacoplar Lovable Gateway → provedores diretos** → §6 (plano da reescrita do wrapper; **não implementado**, por decisão)
 
 ## g) Entregáveis (artefatos para aceite)
 - [🟡] Relatório de auditoria antes/depois → `SECURITY_AUDIT.md` + `PERFORMANCE_AUDIT.md` (consolidar 1 sumário executivo)
@@ -92,13 +92,13 @@
 - [🟡] Dashboards de observabilidade configurados → `OBSERVABILITY.md` + views/RPC
 - [⬜] Plano de backup e recuperação (ver d)
 - [x] Runbook básico de resposta a incidentes → `RUNBOOK_INCIDENTES.md`
-- [⬜] Análise comparativa de LLMs com recomendação (ver f)
+- [x] Análise comparativa de LLMs com recomendação → `docs/LLM_AUDIT.md`
 - [⬜] Guia de boas práticas para desenvolvimento de novas funcionalidades
 - [⬜] Documento de handoff técnico (o que/onde/por que mudou + riscos + próxima fase)
 - [⬜] Reunião de handoff ao término
 
 ## h) Critérios de Aceite (libera 2ª parcela) — espelho dos itens acima
-✅ Relatório antes/depois · ⬜ Banco documentado · 🟡 Queries críticas otimizadas · ✅ RLS revisado nas críticas · ✅ Isolamento testado e documentado · 🟡 Secrets/variáveis revisados · ✅ Edge Functions críticas revisadas · ✅ Logs e alertas configurados · 🟡 Dashboards mínimos ativos · 🟡 Mapeamento de chamadas LLM · ⬜ Recomendações de modelos documentadas · ⬜ Plano de backup entregue · ⬜ Reunião de handoff.
+✅ Relatório antes/depois · ⬜ Banco documentado · 🟡 Queries críticas otimizadas · ✅ RLS revisado nas críticas · ✅ Isolamento testado e documentado · 🟡 Secrets/variáveis revisados · ✅ Edge Functions críticas revisadas · ✅ Logs e alertas configurados · 🟡 Dashboards mínimos ativos · ✅ Mapeamento de chamadas LLM · ✅ Recomendações de modelos documentadas · ⬜ Plano de backup entregue · ⬜ Reunião de handoff.
 
 ## i) FORA do escopo (não fazer — proposta apartada)
 Novas funcionalidades · suporte pós-garantia · redesign UX/UI · novos módulos · **refatoração completa do front** · **migração completa p/ outra cloud/banco** · fine-tuning de IA próprio · agente de IA do zero · **pentest formal certificado** · **auditoria jurídica de LGPD** · suporte 24/7 · correção de bugs fora das frentes.
