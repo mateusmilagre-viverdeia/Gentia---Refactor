@@ -126,20 +126,31 @@ export default function InterviewDebugPage() {
               <CardHeader><CardTitle className="text-base">Linha do tempo</CardTitle></CardHeader>
               <CardContent>
                 <ol className="space-y-3">
-                  {data.timeline.map((e, i) => (
-                    <li key={i} className="flex items-start gap-3 text-sm">
-                      <div className="text-xs text-muted-foreground w-32 shrink-0 flex items-center gap-1">
-                        <Clock className="h-3 w-3" /> {formatBRT(e.ts)}
-                      </div>
-                      <div className="flex-1">
-                        <p className={e.kind === "anomaly" ? "text-amber-700 font-medium" : "font-medium"}>{e.label}</p>
-                        {e.detail && <p className="text-xs text-muted-foreground line-clamp-2">{e.detail}</p>}
-                        {e.payload && (
-                          <pre className="text-[10px] bg-muted p-2 rounded mt-1 overflow-x-auto">{JSON.stringify(e.payload, null, 2)}</pre>
-                        )}
-                      </div>
-                    </li>
-                  ))}
+                  {data.timeline.map((e, i) => {
+                    const colorClass =
+                      e.severity === "critical"
+                        ? "text-red-700 font-semibold"
+                        : e.severity === "warning" || e.kind === "anomaly"
+                        ? "text-amber-700 font-medium"
+                        : e.kind === "event"
+                        ? "text-blue-700 font-medium"
+                        : "font-medium";
+                    return (
+                      <li key={i} className="flex items-start gap-3 text-sm">
+                        <div className="text-xs text-muted-foreground w-32 shrink-0 flex items-center gap-1">
+                          <Clock className="h-3 w-3" /> {formatBRT(e.ts)}
+                        </div>
+                        <div className="flex-1">
+                          <p className={colorClass}>{e.label}</p>
+                          {e.detail && <p className="text-xs text-muted-foreground line-clamp-2">{e.detail}</p>}
+                          {e.payload && (
+                            <pre className="text-[10px] bg-muted p-2 rounded mt-1 overflow-x-auto">{JSON.stringify(e.payload, null, 2)}</pre>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+
                   {data.timeline.length === 0 && <li className="text-muted-foreground text-sm">Sem eventos</li>}
                 </ol>
               </CardContent>

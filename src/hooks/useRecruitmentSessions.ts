@@ -22,10 +22,19 @@ export interface UnifiedSession {
   createdAt: Date;
   completedAt: Date | null;
   startedAt: Date | null;
+  lastActivityAt: Date | null;
   emailSentAt: string | null;
   reusedFromSessionId: string | null;
   isArchived?: boolean;
   attemptNumber?: number | null;
+  // Health / integrity signals (voice interviews)
+  isPartial?: boolean;
+  completedNaturally?: boolean | null;
+  abandonedReason?: string | null;
+  audioStatus?: string | null;
+  hasAudio?: boolean;
+  hasTranscript?: boolean;
+  hasEvaluation?: boolean;
 }
 
 export interface SessionFilters {
@@ -82,7 +91,7 @@ async function fetchUnifiedSessions(filters: SessionFilters): Promise<UnifiedSes
   // Build queries with optional filters
   let cultureQ = supabase
     .from("culture_interview_sessions")
-    .select("id, account_id, job_id, candidate_id, candidate_profile_id, agent_id, status, matching_score, duration_seconds, created_at, completed_at, started_at, last_activity_at, email_sent_at, reused_from_session_id, attempt_number")
+    .select("id, account_id, job_id, candidate_id, candidate_profile_id, agent_id, status, matching_score, duration_seconds, created_at, completed_at, started_at, last_activity_at, email_sent_at, reused_from_session_id, attempt_number, is_partial_evaluation, completed_naturally, abandoned_reason, audio_status, audio_url, partial_transcript")
     .eq("account_id", accountId)
     .is("archived_at", null);
   let discQ = supabase
@@ -92,7 +101,7 @@ async function fetchUnifiedSessions(filters: SessionFilters): Promise<UnifiedSes
     .is("archived_at", null);
   let techQ = supabase
     .from("technical_interview_sessions")
-    .select("id, account_id, job_id, candidate_id, candidate_profile_id, agent_id, status, overall_score, duration_seconds, created_at, completed_at, started_at, last_activity_at, attempt_number")
+    .select("id, account_id, job_id, candidate_id, candidate_profile_id, agent_id, status, overall_score, duration_seconds, created_at, completed_at, started_at, last_activity_at, attempt_number, is_partial_evaluation, completed_naturally, abandoned_reason, audio_status, audio_url, transcript, partial_transcript, evaluation_summary")
     .eq("account_id", accountId)
     .is("archived_at", null);
   let archivedQ = supabase
@@ -133,17 +142,90 @@ async function fetchUnifiedSessions(filters: SessionFilters): Promise<UnifiedSes
     discScoreMap = new Map((discScores || []).map((r: any) => [r.session_id, r.match_score]));
   }
 
+  // Detect culture sessions that have transcript responses (real transcript source)
+  const cultureSessionIds = cultureSessions.map(s => s.id);
+  const cultureSessionsWithResponses = new Set<string>();
+  if (cultureSessionIds.length > 0) {
+    const { data: responseRows } = await supabase
+      .from("culture_interview_responses")
+      .select("session_id")
+      .in("session_id", cultureSessionIds);
+    (responseRows || []).forEach((r: any) => {
+      if (r.session_id) cultureSessionsWithResponses.add(r.session_id);
+    });
+  }
+
   // Collect all IDs for batch resolution
   const allRawSessions = [
-    ...cultureSessions.map(s => ({ ...s, _type: "cultural" as const, _score: (s as any).matching_score, _duration: computeDisplayDuration(s as any), _emailSent: (s as any).email_sent_at, _reusedFrom: (s as any).reused_from_session_id ?? null, _archived: false, _attemptNumber: (s as any).attempt_number ?? null })),
-    ...discSessions.map(s => ({ ...s, _type: "disc" as const, _score: discScoreMap.get(s.id) ?? null, _duration: null as number | null, _emailSent: null as string | null, _reusedFrom: (s as any).reused_from_session_id ?? null, _archived: false, _attemptNumber: (s as any).attempt_number ?? null })),
-    ...techSessions.map(s => ({ ...s, _type: "technical" as const, _score: (s as any).overall_score, _duration: computeDisplayDuration(s as any), _emailSent: null as string | null, _reusedFrom: null as string | null, _archived: false, _attemptNumber: (s as any).attempt_number ?? null })),
+    ...cultureSessions.map(s => {
+      const a = s as any;
+      const hasTranscript =
+        cultureSessionsWithResponses.has(s.id) ||
+        (Array.isArray(a.partial_transcript) ? a.partial_transcript.length > 0 : !!a.partial_transcript);
+      return {
+        ...s,
+        _type: "cultural" as const,
+        _score: a.matching_score,
+        _duration: computeDisplayDuration(a),
+        _emailSent: a.email_sent_at,
+        _reusedFrom: a.reused_from_session_id ?? null,
+        _archived: false,
+        _attemptNumber: a.attempt_number ?? null,
+        _isPartial: a.is_partial_evaluation === true,
+        _completedNaturally: a.completed_naturally ?? null,
+        _abandonedReason: a.abandoned_reason ?? null,
+        _audioStatus: a.audio_status ?? null,
+        _hasAudio: !!a.audio_url,
+        _hasTranscript: hasTranscript,
+        _hasEvaluation: a.matching_score !== null && a.matching_score !== undefined,
+      };
+    }),
+    ...discSessions.map(s => {
+      const a = s as any;
+      return {
+        ...s,
+        _type: "disc" as const,
+        _score: discScoreMap.get(s.id) ?? null,
+        _duration: null as number | null,
+        _emailSent: null as string | null,
+        _reusedFrom: a.reused_from_session_id ?? null,
+        _archived: false,
+        _attemptNumber: a.attempt_number ?? null,
+        _isPartial: false,
+        _completedNaturally: null as boolean | null,
+        _abandonedReason: null as string | null,
+        _audioStatus: null as string | null,
+        _hasAudio: false,
+        _hasTranscript: false,
+        _hasEvaluation: discScoreMap.get(s.id) !== undefined,
+      };
+    }),
+    ...techSessions.map(s => {
+      const a = s as any;
+      const hasTranscript = !!a.transcript || (Array.isArray(a.partial_transcript) ? a.partial_transcript.length > 0 : !!a.partial_transcript);
+      return {
+        ...s,
+        _type: "technical" as const,
+        _score: a.overall_score,
+        _duration: computeDisplayDuration(a),
+        _emailSent: null as string | null,
+        _reusedFrom: null as string | null,
+        _archived: false,
+        _attemptNumber: a.attempt_number ?? null,
+        _isPartial: a.is_partial_evaluation === true,
+        _completedNaturally: a.completed_naturally ?? null,
+        _abandonedReason: a.abandoned_reason ?? null,
+        _audioStatus: a.audio_status ?? null,
+        _hasAudio: !!a.audio_url,
+        _hasTranscript: hasTranscript,
+        _hasEvaluation: a.overall_score !== null && a.overall_score !== undefined,
+      };
+    }),
     ...archivedSessions.map(s => {
       const t = (s.session_type as UnifiedSessionType) || "cultural";
       const dur = s.completed_at && s.started_at
         ? Math.floor((new Date(s.completed_at).getTime() - new Date(s.started_at).getTime()) / 1000)
         : null;
-      // Normalize archived score: cultural/technical use 0-100, but interview_attempt_history.score is already on raw scale used at archive time
       const score = s.score !== null && s.score !== undefined ? Number(s.score) : null;
       return {
         id: s.original_session_id || s.id,
@@ -156,6 +238,7 @@ async function fetchUnifiedSessions(filters: SessionFilters): Promise<UnifiedSes
         created_at: s.created_at,
         completed_at: s.completed_at,
         started_at: s.started_at,
+        last_activity_at: null as string | null,
         _type: t,
         _score: score,
         _duration: dur,
@@ -163,6 +246,13 @@ async function fetchUnifiedSessions(filters: SessionFilters): Promise<UnifiedSes
         _reusedFrom: null as string | null,
         _archived: true,
         _attemptNumber: s.attempt_number ?? null,
+        _isPartial: false,
+        _completedNaturally: null as boolean | null,
+        _abandonedReason: null as string | null,
+        _audioStatus: null as string | null,
+        _hasAudio: false,
+        _hasTranscript: false,
+        _hasEvaluation: score !== null,
       };
     }),
   ];
@@ -261,10 +351,18 @@ async function fetchUnifiedSessions(filters: SessionFilters): Promise<UnifiedSes
       createdAt: new Date(session.created_at || Date.now()),
       completedAt: session.completed_at ? new Date(session.completed_at) : null,
       startedAt: session.started_at ? new Date(session.started_at) : null,
+      lastActivityAt: (session as any).last_activity_at ? new Date((session as any).last_activity_at) : null,
       emailSentAt: session._emailSent || null,
       reusedFromSessionId: session._reusedFrom || null,
       isArchived: session._archived === true,
       attemptNumber: session._attemptNumber ?? null,
+      isPartial: (session as any)._isPartial === true,
+      completedNaturally: (session as any)._completedNaturally ?? null,
+      abandonedReason: (session as any)._abandonedReason ?? null,
+      audioStatus: (session as any)._audioStatus ?? null,
+      hasAudio: (session as any)._hasAudio === true,
+      hasTranscript: (session as any)._hasTranscript === true,
+      hasEvaluation: (session as any)._hasEvaluation === true,
     } satisfies UnifiedSession;
   });
 }

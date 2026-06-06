@@ -175,13 +175,14 @@ serve(async (req) => {
       agentId = job?.agent_id || null;
     }
     if (!agentId) {
-      const { data: step } = await supabase.from("recruitment_workflow_steps")
-        .select("agent_id").eq("job_id", session.job_id).eq("step_type", "cultural").eq("is_active", true).maybeSingle();
+      const { data: step } = await supabase.from("recruitment_job_workflow_steps")
+        .select("agent_id").eq("job_id", session.job_id).eq("step_type", "cultural").eq("is_active", true)
+        .not("agent_id", "is", null).order("position", { ascending: true }).limit(1).maybeSingle();
       agentId = step?.agent_id || null;
     }
     if (!agentId) {
       const { data: agent } = await supabase.from("recruitment_agents")
-        .select("id").eq("account_id", accountId).eq("type", "cultural").eq("is_active", true).limit(1).maybeSingle();
+        .select("id").eq("account_id", accountId).in("type", ["cultural", "structured"]).eq("is_active", true).limit(1).maybeSingle();
       agentId = agent?.id || null;
     }
     if (!agentId) return new Response(JSON.stringify({ error: "no agent" }), { status: 400, headers: corsHeaders });

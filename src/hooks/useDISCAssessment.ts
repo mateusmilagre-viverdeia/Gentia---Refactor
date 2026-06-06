@@ -278,20 +278,20 @@ export function useDISCAssessment() {
 
       const { error: responsesError } = await supabase
         .from('disc_responses')
-        .insert(responsesToInsert);
+        .upsert(responsesToInsert, { onConflict: 'session_id,question_id' });
 
       if (responsesError) throw responsesError;
 
       // 2. Calculate result
       const result = calculateDISCResult(data.responses, questions);
 
-      // 3. Insert result
+      // 3. Insert/Update result
       const { error: resultError } = await supabase
         .from('disc_results')
-        .insert({
+        .upsert({
           session_id: data.sessionId,
           ...result
-        });
+        }, { onConflict: 'session_id' });
 
       if (resultError) throw resultError;
 

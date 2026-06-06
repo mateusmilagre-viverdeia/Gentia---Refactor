@@ -11,6 +11,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { filterFactualQuestions } from "../_shared/factualQuestionFilter.ts";
+import { resolveCulturalAgentId } from "../_shared/resolveCulturalAgent.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -153,6 +154,19 @@ serve(async (req) => {
       });
     }
 
+    // ── Resolve cultural agent_id (Fase 2) ──
+    const resolvedAgent = await resolveCulturalAgentId(supabaseAdmin, {
+      jobId: job.id,
+      accountId: job.account_id,
+    });
+    console.log("[create-culture-test-session] agent resolved", {
+      job_id: job.id,
+      account_id: job.account_id,
+      level: resolvedAgent.level,
+      source: resolvedAgent.source,
+      agent_id: resolvedAgent.agentId,
+    });
+
     // ── Create the test session ──
     const interviewToken = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
@@ -162,6 +176,7 @@ serve(async (req) => {
         account_id: job.account_id,
         job_id: job.id,
         candidate_id: candidate.id,
+        agent_id: resolvedAgent.agentId,
         token: interviewToken,
         status: "pending",
         questions,

@@ -1,6 +1,7 @@
 // Test recruitment E2E simulation v2
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { resolveCulturalAgentId } from "../_shared/resolveCulturalAgent.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -263,12 +264,14 @@ serve(async (req) => {
       await cleanupIdempotencyHashes(candidateId, jobId);
       const tempStepIds = await ensureWorkflowSteps(jobId);
 
+      const resolvedCultAgent = await resolveCulturalAgentId(supabase, { jobId, accountId });
       const { data: session, error: sessErr } = await supabase
         .from("culture_interview_sessions")
         .insert({
           account_id: accountId,
           job_id: jobId,
           candidate_id: candidateId,
+          agent_id: resolvedCultAgent.agentId,
           status: "completed",
           matching_score: 85,
           questions: [
@@ -450,6 +453,7 @@ serve(async (req) => {
       await cleanupIdempotencyHashes(candidateId, jobId);
       const tempStepIds = await ensureWorkflowSteps(jobId);
 
+      const resolvedCultAgentFull = await resolveCulturalAgentId(supabase, { jobId, accountId });
       // 1. Create session in_progress (as the real frontend would)
       const { data: session, error: sessErr } = await supabase
         .from("culture_interview_sessions")
@@ -457,6 +461,7 @@ serve(async (req) => {
           account_id: accountId,
           job_id: jobId,
           candidate_id: candidateId,
+          agent_id: resolvedCultAgentFull.agentId,
           status: "in_progress",
           questions: [
             { question: "Conte sobre uma situação em que precisou adaptar-se rapidamente.", value: "Adaptabilidade" },

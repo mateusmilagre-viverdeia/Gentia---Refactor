@@ -16,7 +16,9 @@ import { CandidateNavbar } from "@/components/candidate/CandidateNavbar";
 import { ApplicationStepper, buildStepperSteps } from "@/components/candidate/ApplicationStepper";
 import { DISCAssessmentInline } from "@/components/candidate/DISCAssessmentInline";
 import { InterviewStartGateMessage, type InterviewGateState } from "@/components/candidate/InterviewStartGate";
+import { ScreeningStep } from "@/components/public/ScreeningStep";
 import { toast } from "sonner";
+
 import { 
   ArrowLeft, 
   Building2, 
@@ -32,7 +34,9 @@ import {
   Code,
   XCircle,
   RotateCcw,
+  Shield,
 } from "lucide-react";
+
 
 interface JobData {
   id: string;
@@ -77,6 +81,10 @@ export default function AplicarVaga() {
 
   // DISC state
   const [hasCompletedDISC, setHasCompletedDISC] = useState(false);
+
+  // Screening state
+  const [hasCompletedScreening, setHasCompletedScreening] = useState(false);
+
 
   // Evaluating state — blocks advancement while orchestrator processes
   const [evaluatingStep, setEvaluatingStep] = useState<string | null>(null);
@@ -507,9 +515,16 @@ export default function AplicarVaga() {
     };
   }, []);
 
+  const hasScreeningStep = workflowSteps?.some((s) => s.step_type === "screening");
   const hasCulturalStep = workflowSteps?.some((s) => s.step_type === "cultural");
   const hasDISCStep = workflowSteps?.some((s) => s.step_type === "disc");
   const hasTechnicalStep = workflowSteps?.some((s) => s.step_type === "technical");
+
+  const screeningStep = workflowSteps?.find((s: any) => s.step_type === "screening");
+  const screeningQuestions = ((screeningStep?.threshold_config as any)?.questions ?? []) as Array<{
+    id: string; category: string; text: string; required: boolean;
+  }>;
+
 
   // Helper to build OR filter for candidate identification
   const idFilters: string[] = [];
@@ -517,7 +532,26 @@ export default function AplicarVaga() {
   if (candidateProfileId) idFilters.push(`candidate_profile_id.eq.${candidateProfileId}`);
   const candidateOrFilter = idFilters.length > 0 ? idFilters.join(",") : null;
 
+  // Check existing screening result
+  const { data: existingScreening, refetch: refetchExistingScreening } = useQuery({
+    queryKey: ["existing-screening", jobId, resolvedCandidateId],
+    queryFn: async () => {
+      if (!jobId || !resolvedCandidateId) return null;
+      const { data } = await (supabase as any)
+        .from("recruitment_screening_results")
+        .select("id, passed, completed_at")
+        .eq("job_id", jobId)
+        .eq("candidate_id", resolvedCandidateId)
+        .order("completed_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!jobId && !!resolvedCandidateId && !!hasScreeningStep,
+  });
+
   // Check existing cultural interview
+
   const { data: existingInterview, isLoading: checkingInterview, refetch: refetchExistingInterview } = useQuery({
     queryKey: ["existing-interview", jobId, resolvedCandidateId, candidateProfileId],
     queryFn: async () => {
@@ -597,11 +631,18 @@ export default function AplicarVaga() {
 
   // Sync states
   useEffect(() => {
+    if (existingScreening?.passed === true) {
+      setHasCompletedScreening(true);
+    }
+  }, [existingScreening]);
+
+  useEffect(() => {
     if (existingInterview) {
       setHasCompletedInterview(true);
       setInterviewScore(existingInterview.matching_score);
     }
   }, [existingInterview]);
+
 
   useEffect(() => {
     if (existingDISCSession?.status === "completed") {
@@ -650,16 +691,20 @@ export default function AplicarVaga() {
     return false;
   }, [existingInterview, existingDISCSession, existingTechnicalInterview, culturalThreshold, technicalThreshold, discThreshold]);
 
-  const effectiveDisqualified = isDisqualified || derivedDisqualified;
+  const screeningFailed = existingScreening?.passed === false;
+  const effectiveDisqualified = isDisqualified || derivedDisqualified || screeningFailed;
+
 
   // Build stepper
   const completedTypes = useMemo(() => {
     const set = new Set<string>();
+    if (hasCompletedScreening) set.add("screening");
     if (hasCompletedInterview) set.add("cultural");
     if (hasCompletedDISC) set.add("disc");
     if (hasCompletedTechnicalInterview) set.add("technical");
     return set;
-  }, [hasCompletedInterview, hasCompletedDISC, hasCompletedTechnicalInterview]);
+  }, [hasCompletedScreening, hasCompletedInterview, hasCompletedDISC, hasCompletedTechnicalInterview]);
+
 
   const stepperSteps = useMemo(() => {
     if (!workflowSteps || workflowSteps.length === 0) return [];
@@ -990,8 +1035,68 @@ export default function AplicarVaga() {
       );
     }
 
+    // Active step: screening
+    if (activeStepType === "screening") {
+      if (!applicationStatus?.id || !resolvedCandidateId) {
+        return (
+          <Card className="mb-6">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                  <Shield className="h-5 w-5 text-orange-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold">Triagem Inicial</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Preparando sua candidatura antes de iniciar a triagem
+                  </p>
+                </div>
+              </div>
+              <InterviewStartGateMessage
+                state={culturalGateState}
+                onRetry={() => refetchCandidateId()}
+                onLinkCandidate={handleLinkCandidate}
+              />
+            </CardContent>
+          </Card>
+        );
+      }
+      if (screeningQuestions.length === 0) {
+        // Configured but no questions — treat as auto-pass to not block candidate
+        return (
+          <Card className="mb-6">
+            <CardContent className="p-6 text-center space-y-3">
+              <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
+              <p className="text-sm text-muted-foreground">Carregando perguntas de triagem...</p>
+            </CardContent>
+          </Card>
+        );
+      }
+      return (
+        <div className="mb-6">
+          <ScreeningStep
+            applicationId={applicationStatus.id}
+            candidateId={resolvedCandidateId}
+            jobId={jobId || ""}
+            accountId={company?.id || ""}
+            questions={screeningQuestions}
+            onComplete={async (passed) => {
+              if (passed) {
+                setHasCompletedScreening(true);
+                await Promise.all([refetchExistingScreening(), refetchAppStatus()]);
+              } else {
+                await refetchExistingScreening();
+                setLocallyRejected(true);
+              }
+            }}
+          />
+        </div>
+      );
+    }
+
     // Active step: cultural
     if (activeStepType === "cultural") {
+
       return (
         <Card className="mb-6">
           <CardContent className="p-6">

@@ -3,6 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { createLogger } from '../_shared/logger.ts';
 import { getConfiguredModel } from '../_shared/ai-model-config.ts';
 import { consumeAICredits } from '../_shared/ai-credit-consumption.ts';
+import { resolveCulturalAgentId } from "../_shared/resolveCulturalAgent.ts";
 
 const log = createLogger('culture-interview-chat');
 
@@ -105,6 +106,15 @@ serve(async (req) => {
         }
       }
 
+      // Resolve agent_id (Fase 2: persist on create)
+      const resolved = await resolveCulturalAgentId(supabase, {
+        jobId,
+        accountId,
+      });
+      if (!resolved.agentId) {
+        console.warn("[culture-interview-chat] No cultural agent resolved", { jobId, accountId });
+      }
+
       // Create interview session
       const { data: session, error: sessionError } = await supabase
         .from("culture_interview_sessions")
@@ -112,6 +122,7 @@ serve(async (req) => {
           account_id: accountId,
           job_id: jobId,
           candidate_profile_id: candidateProfileId,
+          agent_id: resolved.agentId,
           status: "pending",
           questions: questions,
         })

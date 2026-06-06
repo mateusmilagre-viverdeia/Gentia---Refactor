@@ -43,7 +43,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Search, MoreHorizontal, Clock, Link as LinkIcon, Video, RotateCcw } from "lucide-react";
+import { Search, MoreHorizontal, Clock, Link as LinkIcon, Video, RotateCcw, AudioLines, FileText, Sparkles, AlertTriangle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import {
   Select,
   SelectContent,
@@ -74,12 +77,37 @@ function inviteToastFromWhatsAppStatus(whatsapp: unknown) {
 
 const INTERVIEW_STATUS_OPTIONS = [
   { value: "all", label: "Todos os status" },
-  { value: "pending", label: "Pendente" },
-  { value: "scheduled", label: "Agendada" },
+  { value: "invite_sent", label: "Convite enviado" },
+  { value: "invite_pending", label: "Convite não entregue" },
   { value: "in_progress", label: "Em andamento" },
+  { value: "stalled", label: "Parada (sem atividade)" },
   { value: "completed", label: "Concluída" },
+  { value: "partial", label: "Parcial" },
+  { value: "abandoned", label: "Abandonada" },
+  { value: "failed_technical", label: "Falha técnica" },
   { value: "cancelled", label: "Cancelada" },
+  { value: "archived", label: "Arquivada (retry)" },
 ];
+
+const HEALTH_FILTER_OPTIONS = [
+  { value: "all", label: "Toda saúde" },
+  { value: "issues", label: "Apenas com problemas" },
+  { value: "ok", label: "Apenas íntegras" },
+];
+
+const ATTEMPT_FILTER_OPTIONS = [
+  { value: "all", label: "Todas as tentativas" },
+  { value: "first", label: "Apenas 1ª tentativa" },
+  { value: "retries", label: "Apenas retries" },
+];
+
+const REASON_LABEL: Record<string, string> = {
+  watchdog_stale_partial: "Encerrada automaticamente após inatividade — avaliação parcial.",
+  watchdog_no_content: "Encerrada automaticamente após inatividade. Sem conteúdo útil.",
+  no_transcript: "Sem transcrição suficiente para avaliar.",
+  no_content_timeout: "Tempo esgotado sem conteúdo capturado.",
+  failed_technical_no_audio: "Falha técnica: áudio não chegou ao servidor (mic/firewall/rede).",
+};
 
 const INTERVIEW_TYPE_OPTIONS = [
   { value: "all", label: "Todos os tipos" },
@@ -94,11 +122,42 @@ const TYPE_BADGE_CONFIG: Record<InterviewType, { label: string; variant: "info" 
   technical: { label: "Fit Técnico", variant: "warning" },
 };
 
+const STALLED_THRESHOLD_MS = 10 * 60 * 1000; // 10 min
+
 function formatDuration(seconds: number | null) {
   if (!seconds) return "-";
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
   return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
+
+function deriveEffectiveStatus(s: UnifiedSession): string {
+  if (s.isArchived) return "archived";
+  const raw = s.status || "pending";
+  if (raw === "completed" && s.isPartial) return "partial";
+  if (raw === "in_progress" && s.lastActivityAt) {
+    const age = Date.now() - s.lastActivityAt.getTime();
+    if (age > STALLED_THRESHOLD_MS) return "stalled";
+  }
+  if (raw === "pending") {
+    if (!s.emailSentAt && s.type === "cultural") {
+      // Convite ainda não foi enviado e já passou >24h da criação
+      const age = Date.now() - s.createdAt.getTime();
+      if (age > 24 * 60 * 60 * 1000) return "invite_pending";
+    }
+    if (s.emailSentAt) return "invite_sent" as any; // não-tema do StatusBadge — tratado abaixo
+  }
+  return raw;
+}
+
+function hasHealthIssue(s: UnifiedSession): boolean {
+  if (s.type === "disc") return false;
+  if (s.status !== "completed") return false;
+  return s.isPartial === true
+    || s.audioStatus === "missing"
+    || s.hasAudio === false
+    || s.hasTranscript === false
+    || s.hasEvaluation === false;
 }
 
 function sessionToRow(s: UnifiedSession) {
@@ -119,11 +178,13 @@ function sessionToRow(s: UnifiedSession) {
     agentName: s.agentName,
     duration: formatDuration(s.durationSeconds),
     status: s.status,
+    effectiveStatus: deriveEffectiveStatus(s),
     evaluation: s.score !== null ? (s.score >= 70 ? "approved" : s.score >= 40 ? "pending" : "rejected") : "n/a",
     matchingScore: s.score,
     date: s.createdAt,
     completedAt: s.completedAt,
     startedAt: s.startedAt,
+    lastActivityAt: s.lastActivityAt,
     candidateId: s.candidateId,
     candidateProfileId: s.candidateProfileId,
     jobId: s.jobId,
@@ -131,6 +192,13 @@ function sessionToRow(s: UnifiedSession) {
     applicationId: s.applicationId || "",
     isArchived: s.isArchived === true,
     attemptNumber: s.attemptNumber ?? null,
+    isPartial: s.isPartial === true,
+    abandonedReason: s.abandonedReason || null,
+    audioStatus: s.audioStatus || null,
+    hasAudio: s.hasAudio === true,
+    hasTranscript: s.hasTranscript === true,
+    hasEvaluation: s.hasEvaluation === true,
+    healthIssue: hasHealthIssue(s),
   };
 }
 
@@ -148,6 +216,8 @@ const InterviewsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [healthFilter, setHealthFilter] = useState("all");
+  const [attemptFilter, setAttemptFilter] = useState("all");
   const [selectedInterviews, setSelectedInterviews] = useState<string[]>([]);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [interviewToCancel, setInterviewToCancel] = useState<{ id: string; type: InterviewType } | null>(null);
@@ -172,9 +242,17 @@ const InterviewsPage = () => {
     const matchesSearch = interview.candidateName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       interview.candidateEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
       interview.jobTitle.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || interview.status === statusFilter;
+    const matchesStatus = statusFilter === "all" || interview.effectiveStatus === statusFilter;
     const matchesType = typeFilter === "all" || interview.interviewType === typeFilter;
-    return matchesSearch && matchesStatus && matchesType;
+    const matchesHealth = healthFilter === "all"
+      || (healthFilter === "issues" && interview.healthIssue)
+      || (healthFilter === "ok" && !interview.healthIssue);
+    const attemptN = interview.attemptNumber ?? 1;
+    const isRetry = attemptN > 1 || interview.isArchived;
+    const matchesAttempt = attemptFilter === "all"
+      || (attemptFilter === "first" && !isRetry)
+      || (attemptFilter === "retries" && isRetry);
+    return matchesSearch && matchesStatus && matchesType && matchesHealth && matchesAttempt;
   });
 
   const { sortConfig, handleSort, sortedData: sortedInterviews } = useTableSort(filteredInterviews, { key: "date", direction: "desc" });
@@ -369,7 +447,7 @@ const InterviewsPage = () => {
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[210px]">
                 <SelectValue placeholder="Filtrar por status" />
               </SelectTrigger>
               <SelectContent>
@@ -380,8 +458,32 @@ const InterviewsPage = () => {
                 ))}
               </SelectContent>
             </Select>
-            {(statusFilter !== "all" || typeFilter !== "all") && (
-              <Button variant="ghost" size="icon" onClick={() => { setStatusFilter("all"); setTypeFilter("all"); }}>
+            <Select value={healthFilter} onValueChange={setHealthFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Saúde" />
+              </SelectTrigger>
+              <SelectContent>
+                {HEALTH_FILTER_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={attemptFilter} onValueChange={setAttemptFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Tentativas" />
+              </SelectTrigger>
+              <SelectContent>
+                {ATTEMPT_FILTER_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {(statusFilter !== "all" || typeFilter !== "all" || healthFilter !== "all" || attemptFilter !== "all") && (
+              <Button variant="ghost" size="icon" onClick={() => { setStatusFilter("all"); setTypeFilter("all"); setHealthFilter("all"); setAttemptFilter("all"); }}>
                 <X className="h-4 w-4" />
               </Button>
             )}
@@ -424,11 +526,12 @@ const InterviewsPage = () => {
                 />
                 <SortableHeader
                   label="Status"
-                  sortKey="status"
+                  sortKey="effectiveStatus"
                   currentSortKey={sortConfig.key}
                   direction={sortConfig.direction}
                   onSort={handleSort}
                 />
+                <TableHead>Saúde</TableHead>
                 <SortableHeader
                   label="Score"
                   sortKey="matchingScore"
@@ -457,6 +560,7 @@ const InterviewsPage = () => {
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-8 w-8" /></TableCell>
@@ -464,7 +568,7 @@ const InterviewsPage = () => {
                 ))
               ) : sortedInterviews.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="h-32 text-center">
+                  <TableCell colSpan={11} className="h-32 text-center">
                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
                       <Video className="h-8 w-8" />
                       <p>Nenhuma entrevista encontrada</p>
@@ -498,11 +602,15 @@ const InterviewsPage = () => {
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
                               <p className="font-medium truncate">{interview.candidateName}</p>
-                              {interview.isArchived && (
+                              {interview.isArchived ? (
                                 <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
                                   Tentativa {interview.attemptNumber ?? "anterior"}
                                 </Badge>
-                              )}
+                              ) : (interview.attemptNumber ?? 1) > 1 ? (
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-amber-400 text-amber-700 dark:text-amber-400">
+                                  Tentativa {interview.attemptNumber}
+                                </Badge>
+                              ) : null}
                             </div>
                             <p className="text-xs text-muted-foreground truncate">{interview.candidateEmail || "Sem e-mail"}</p>
                           </div>
@@ -527,7 +635,65 @@ const InterviewsPage = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <StatusBadge status={interview.status} />
+                        <TooltipProvider delayDuration={200}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="inline-flex items-center gap-1">
+                                <StatusBadge status={interview.effectiveStatus} />
+                                {(interview.effectiveStatus === "abandoned" || interview.effectiveStatus === "failed_technical" || interview.effectiveStatus === "partial" || interview.effectiveStatus === "stalled" || interview.effectiveStatus === "invite_pending") && (
+                                  <AlertTriangle className="h-3 w-3 text-amber-600" />
+                                )}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              <p className="text-xs">
+                                {interview.abandonedReason && REASON_LABEL[interview.abandonedReason]
+                                  ? REASON_LABEL[interview.abandonedReason]
+                                  : interview.effectiveStatus === "stalled" && interview.lastActivityAt
+                                    ? `Sem atividade há ${formatDistanceToNow(interview.lastActivityAt, { locale: ptBR })}.`
+                                    : interview.effectiveStatus === "invite_pending"
+                                      ? "Convite criado mas e-mail nunca foi enviado. Reenvie pelo menu."
+                                      : interview.effectiveStatus === "partial"
+                                        ? "Avaliação parcial — entrevista não foi concluída naturalmente."
+                                        : `Status bruto: ${interview.status}`}
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableCell>
+                      <TableCell>
+                        {interview.interviewType === "disc" ? (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        ) : (
+                          <TooltipProvider delayDuration={200}>
+                            <div className="flex items-center gap-1">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className={`inline-flex items-center justify-center h-5 w-5 rounded-full ${interview.hasAudio ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400" : "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400"}`}>
+                                    <AudioLines className="h-3 w-3" />
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent><p className="text-xs">Áudio: {interview.hasAudio ? "ok" : interview.audioStatus === "missing" ? "perdido" : "indisponível"}</p></TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className={`inline-flex items-center justify-center h-5 w-5 rounded-full ${interview.hasTranscript ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400" : "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400"}`}>
+                                    <FileText className="h-3 w-3" />
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent><p className="text-xs">Transcrição: {interview.hasTranscript ? "ok" : "indisponível"}</p></TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className={`inline-flex items-center justify-center h-5 w-5 rounded-full ${interview.hasEvaluation && !interview.isPartial ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400" : interview.hasEvaluation && interview.isPartial ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400" : "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400"}`}>
+                                    <Sparkles className="h-3 w-3" />
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent><p className="text-xs">Avaliação: {interview.hasEvaluation ? (interview.isPartial ? "parcial" : "ok") : "pendente"}</p></TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </TooltipProvider>
+                        )}
                       </TableCell>
                       <TableCell>
                         {interview.matchingScore !== null && interview.matchingScore !== undefined ? (
@@ -550,7 +716,19 @@ const InterviewsPage = () => {
                         )}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {formatBRT(interview.date, "dd/MM/yyyy")}
+                        <TooltipProvider delayDuration={200}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span>{formatBRT(interview.date, "dd/MM/yyyy")}</span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <p className="text-xs">
+                                Criada: {formatBRT(interview.date, "dd/MM/yyyy HH:mm")}
+                                {interview.lastActivityAt ? ` · Última atividade há ${formatDistanceToNow(interview.lastActivityAt, { locale: ptBR })}` : ""}
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>

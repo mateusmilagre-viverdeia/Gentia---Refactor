@@ -26,6 +26,7 @@ import { motion } from "framer-motion";
 import { logVoiceInterviewEvent } from "@/lib/voiceInterviewTelemetry";
 import { toast } from "sonner";
 import { InterviewLiveTips } from "@/components/interviews/InterviewLiveTips";
+import { classifyTranscript } from "@/lib/interviewTranscriptFilter";
 
 interface Props {
   sessionId: string;
@@ -102,6 +103,10 @@ export function CultureInterviewActiveConductor({
   // Quantas vezes já tentamos descartar um `action: "end"` com cobertura
   // incompleta. Bound em 3 para evitar loop caso o backend insista.
   const incompleteEndRetriesRef = useRef(0);
+  // Maior questionIndex já visto (fora de followup). Usado para detectar
+  // regressão do conductor e abortar como fim em vez de entrar em loop.
+  const maxQuestionIndexRef = useRef<number>(-1);
+
 
   // v2.1: double-fire guards + active response tracking + speculative prefetch
   const nextTurnInFlightRef = useRef(false);
@@ -361,8 +366,57 @@ export function CultureInterviewActiveConductor({
       lastTurnIdRef.current = r.turnId;
       currentTurnRef.current = r;
       setCoverage(r.coverage);
+
+      // ── Observabilidade de regressão de questionIndex ──
+      // O servidor pode legitimamente devolver um índice menor (candidato
+      // pediu para voltar, coverage gate reabriu pendência, reformulação).
+      // Apenas logamos para telemetria; NÃO alteramos r.action.
+      if (
+        r.action === "speak" &&
+        !r.isFollowup &&
+        r.phase !== "closing" &&
+        r.phase !== "opening" &&
+        r.phase !== "awaiting_start" &&
+        maxQuestionIndexRef.current >= 0 &&
+        r.questionIndex < maxQuestionIndexRef.current
+      ) {
+        logVoiceInterviewEvent({
+          sessionId,
+          sessionType: "cultural",
+          eventType: "conductor_regression_detected_client",
+          payload: {
+            previousMax: maxQuestionIndexRef.current,
+            received: r.questionIndex,
+            phase: r.phase,
+            coverage: r.coverage,
+            note: "logged_only_no_force_end",
+          },
+        });
+      } else if (r.action === "speak" && !r.isFollowup && r.questionIndex >= 0) {
+        if (r.questionIndex > maxQuestionIndexRef.current) {
+          maxQuestionIndexRef.current = r.questionIndex;
+        }
+      }
+
+
+      // Log do turno emitido para a timeline de debug e detector de anomalias.
+      logVoiceInterviewEvent({
+        sessionId,
+        sessionType: "cultural",
+        eventType: "conductor_next_turn",
+        payload: {
+          action: r.action,
+          phase: r.phase,
+          questionIndex: r.questionIndex,
+          isFollowup: r.isFollowup,
+          coverage: r.coverage,
+          turnId: r.turnId,
+        },
+      });
+
       if (r.action === "end") {
         // ── Guard contra encerramento precoce ──
+
         // Se o backend pediu para encerrar mas a cobertura ainda não está
         // completa, NÃO finaliza: loga warning e pede o próximo turno de novo.
         // O conductor agora tem gate de cobertura — esse caminho só deve
@@ -452,18 +506,41 @@ export function CultureInterviewActiveConductor({
         userTurnTextRef.current = "";
         logVoiceInterviewEvent({ sessionId, sessionType: "cultural", eventType: "speech_started" });
         break;
-      case "input_audio_buffer.speech_stopped":
+      case "input_audio_buffer.speech_stopped": {
         setIsUserSpeaking(false);
         userSpeechStoppedAtRef.current = Date.now();
-        logVoiceInterviewEvent({ sessionId, sessionType: "cultural", eventType: "speech_stopped" });
+        const burstSec =
+          userTurnStartSecRef.current !== null
+            ? Math.max(0, elapsedSec() - userTurnStartSecRef.current)
+            : 0;
+        logVoiceInterviewEvent({
+          sessionId,
+          sessionType: "cultural",
+          eventType: "speech_stopped",
+          payload: { burst_sec: Number(burstSec.toFixed(2)) },
+        });
         // Speculative prefetch: warm up the next turn in parallel with
         // transcription so we cut ~300-600ms of round-trip latency.
-        if (!speculativeTurnRef.current && !endedRef.current) {
+        // Only when the burst was long enough to plausibly be a real answer —
+        // avoids "queimar" o conductor com respiros/ruídos curtos do VAD.
+        if (
+          burstSec >= 0.8 &&
+          !speculativeTurnRef.current &&
+          !endedRef.current
+        ) {
           void callConductor<NextTurnResp>("next-turn", { speculative: true }).then((r) => {
             if (r) speculativeTurnRef.current = r;
           });
+        } else if (burstSec < 0.8) {
+          logVoiceInterviewEvent({
+            sessionId,
+            sessionType: "cultural",
+            eventType: "speculative_skipped_short_burst",
+            payload: { burst_sec: Number(burstSec.toFixed(2)) },
+          });
         }
         break;
+      }
       case "conversation.item.input_audio_transcription.completed": {
         const transcript = String((evt as { transcript?: string }).transcript || "").trim();
         const startSec = userTurnStartSecRef.current ?? Math.max(0, elapsedSec() - 4);
@@ -478,6 +555,34 @@ export function CultureInterviewActiveConductor({
           payload: { len: transcript.length, startSec, endSec },
         });
         if (!transcript) return;
+
+        // Filtro anti-ruído: descarta hallucinations curtas do Whisper
+        // (ex.: "ok", "thanks", "ah", "again") e transcrições fora do PT-BR,
+        // que de outra forma disparariam commitAndAdvance e fariam o conductor
+        // pular perguntas sem o candidato ter falado. Mesma lógica já usada
+        // em CultureInterviewActive e TechnicalInterviewActive.
+        const phase = currentTurnRef.current?.phase;
+        const dropReason = classifyTranscript(transcript, {
+          awaitingConfirmation: phase === "opening" || phase === "awaiting_start",
+        });
+        if (dropReason) {
+          logVoiceInterviewEvent({
+            sessionId,
+            sessionType: "cultural",
+            eventType: "transcript_dropped_noise",
+            payload: {
+              len: transcript.length,
+              reason: dropReason,
+              sample: transcript.slice(0, 60),
+              phase: phase ?? null,
+            },
+          });
+          // Descarta também o turno especulativo já prefetchado para não
+          // consumir a próxima pergunta na próxima rodada legítima.
+          speculativeTurnRef.current = null;
+          return;
+        }
+
         void commitAndAdvance(transcript, startSec, endSec);
         break;
       }
@@ -654,7 +759,46 @@ export function CultureInterviewActiveConductor({
 
   useEffect(() => {
     void connect();
+
+    // ── Pagehide fallback ──
+    // Se o usuário fechar/recarregar a aba antes do encerramento normal, faz
+    // best-effort para preservar o áudio: força requestData() no recorder e
+    // envia os chunks acumulados via sendBeacon (que sobrevive ao unload).
+    const handlePageHide = () => {
+      try {
+        const r = mediaRecorderRef.current;
+        if (r && r.state === "recording") {
+          try { r.requestData(); } catch {/*noop*/}
+          try { r.stop(); } catch {/*noop*/}
+        }
+        const chunks = audioChunksRef.current;
+        if (chunks && chunks.length > 0 && typeof navigator !== "undefined" && "sendBeacon" in navigator) {
+          const blob = new Blob(chunks, { type: "audio/webm" });
+          if (blob.size > 0) {
+            const fd = new FormData();
+            fd.append("audio", blob, "interview.webm");
+            fd.append("sessionId", sessionId);
+            fd.append("source", "pagehide");
+            const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/culture-interview-upload-audio`;
+            try {
+              navigator.sendBeacon(url, fd);
+              logVoiceInterviewEvent({
+                sessionId,
+                sessionType: "cultural",
+                eventType: "audio_upload_pagehide_attempt",
+                payload: { size: blob.size },
+              });
+            } catch {/*noop*/}
+          }
+        }
+      } catch {/*noop*/}
+    };
+    window.addEventListener("pagehide", handlePageHide);
+    window.addEventListener("beforeunload", handlePageHide);
+
     return () => {
+      window.removeEventListener("pagehide", handlePageHide);
+      window.removeEventListener("beforeunload", handlePageHide);
       // Best-effort recorder stop on unmount (no upload — page is going away).
       try {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
@@ -672,6 +816,7 @@ export function CultureInterviewActiveConductor({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
 
   // Elapsed timer
   useEffect(() => {

@@ -24,6 +24,8 @@ interface CheckoutRequest {
   quantity: number;
   price_id: string;
   coupon_code?: string;
+  base_plan_price_id?: string;
+  is_new_subscription?: boolean;
 }
 
 serve(async (req) => {
@@ -61,8 +63,15 @@ serve(async (req) => {
     logStep("User authenticated", { userId: user.id, email: user.email });
 
     // Parse request body
-    const { account_id, quantity, price_id, coupon_code }: CheckoutRequest = await req.json();
-    logStep("Request parsed", { account_id, quantity, price_id, coupon_code: coupon_code ? 'provided' : 'none' });
+    const { 
+      account_id, 
+      quantity, 
+      price_id, 
+      coupon_code,
+      base_plan_price_id,
+      is_new_subscription 
+    }: CheckoutRequest = await req.json();
+    logStep("Request parsed", { account_id, quantity, price_id, is_new_subscription });
 
     if (!account_id || !quantity || !price_id) {
       throw new Error("Missing required parameters: account_id, quantity, price_id");
@@ -370,29 +379,103 @@ serve(async (req) => {
     }
 
     // Não tem assinatura - criar nova subscription via Checkout Session
-    logStep("Creating checkout for new subscription (seats only)");
-    
+    logStep("Creating checkout for new subscription (plan + seats)");
+
+    // Check active grants — waive base plan and free_seats
+    const nowIso = new Date().toISOString();
+    const [{ data: seatGrants }, { data: adminGrants }] = await Promise.all([
+      supabaseClient
+        .from('org_seat_grants')
+        .select('free_seats, valid_until')
+        .eq('org_id', account_id),
+      supabaseClient
+        .from('admin_grants')
+        .select('id')
+        .eq('org_id', account_id)
+        .is('revoked_at', null)
+        .gt('expires_at', nowIso),
+    ]);
+    const freeSeats = (seatGrants ?? [])
+      .filter((g: any) => !g.valid_until || g.valid_until > nowIso)
+      .reduce((sum: number, g: any) => sum + (g.free_seats || 0), 0);
+    const hasActiveGrant = freeSeats > 0 || (adminGrants?.length ?? 0) > 0;
+    const paidSeats = hasActiveGrant ? Math.max(0, quantity - freeSeats) : quantity;
+
+    logStep("Grants evaluated for new subscription", { freeSeats, hasActiveGrant, paidSeats });
+
+    // Se todos os assentos estão cobertos pelo grant, não criar checkout
+    if (hasActiveGrant && paidSeats === 0) {
+      const { data: existingSeats } = await supabaseClient
+        .from('org_seats')
+        .select('paid_seats')
+        .eq('org_id', account_id)
+        .maybeSingle();
+
+      const newPaidSeats = (existingSeats?.paid_seats || 0) + quantity;
+      await supabaseClient
+        .from('org_seats')
+        .upsert({
+          org_id: account_id,
+          paid_seats: newPaidSeats,
+          updated_at: new Date().toISOString(),
+        });
+
+      await supabaseClient.from('billing_events').insert({
+        org_id: account_id,
+        event_type: 'grant_seats_granted',
+        payload: { quantity, reason: 'Active grant covered all seats', freeSeats },
+      });
+
+      logStep("All seats covered by grant — no Stripe checkout needed", { quantity, newPaidSeats });
+      return new Response(JSON.stringify({
+        exempt: true,
+        message: `${quantity} assento(s) adicionado(s) gratuitamente (cortesia ativa)`,
+        newPaidSeats,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
+
+    const lineItems: Array<{ price: string; quantity: number }> = [
+      {
+        price: price_id,
+        quantity: paidSeats,
+      },
+    ];
+
+    // Se for nova assinatura SEM grant, incluir o plano base; com grant, pular plano base
+    if ((is_new_subscription || !billing?.stripe_subscription_id) && !hasActiveGrant) {
+      const finalBasePriceId = base_plan_price_id || "price_1SivZbKV6gEseQSlAlIoMXok";
+      logStep("Adding base plan to new subscription", { basePlanPriceId: finalBasePriceId });
+      lineItems.unshift({
+        price: finalBasePriceId,
+        quantity: 1,
+      });
+    } else if (hasActiveGrant) {
+      logStep("Skipping base plan — active grant", { freeSeats });
+    }
+
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
-      line_items: [
-        {
-          price: price_id,
-          quantity,
-        },
-      ],
+      line_items: lineItems,
       mode: "subscription",
       success_url: `${origin}/conta/usuarios?seats_purchased=true&quantity=${quantity}`,
       cancel_url: `${origin}/conta/usuarios?seats_cancelled=true`,
       metadata: {
         account_id,
-        type: 'additional_seats',
+        org_id: account_id,
+        type: (is_new_subscription || !billing?.stripe_subscription_id) ? 'new_subscription' : 'additional_seats',
         quantity: quantity.toString(),
+        paid_seats: paidSeats.toString(),
+        grant_applied: hasActiveGrant ? 'true' : 'false',
       },
       subscription_data: {
         metadata: {
           account_id,
           org_id: account_id,
           type: 'seat_purchase',
+          grant_applied: hasActiveGrant ? 'true' : 'false',
         },
       },
       allow_promotion_codes: true,

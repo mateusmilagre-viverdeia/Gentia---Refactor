@@ -10,7 +10,8 @@ import {
   findCatalogValueLabel 
 } from '@/types/values-questions.types';
 import { createLogger } from '@/lib/logger';
-import { isFactualQuestion, FACTUAL_QUESTION_BLOCK_MESSAGE } from '@/lib/factualQuestionFilter';
+// Nota: filtro de perguntas factuais é aplicado server-side em start-culture-session.
+// O wizard não bloqueia mais para não atrapalhar a UX do consultor.
 
 const log = createLogger('ValuesQuestionsContext');
 
@@ -245,10 +246,10 @@ export function ValuesQuestionsProvider({ children }: { children: React.ReactNod
   ) => {
     if (!session) return;
 
-    if (isFactualQuestion(text)) {
-      toast({ title: 'Pergunta bloqueada', description: FACTUAL_QUESTION_BLOCK_MESSAGE, variant: 'destructive' });
-      return;
-    }
+    // Perguntas factuais (Nome, Idade, etc.) são silenciosamente puladas pela
+    // IA cultural em runtime (filtro em start-culture-session). Wizard não bloqueia.
+
+
 
     try {
       const maxPosition = items
@@ -281,10 +282,8 @@ export function ValuesQuestionsProvider({ children }: { children: React.ReactNod
   };
 
   const updateItem = async (id: string, text: string) => {
-    if (isFactualQuestion(text)) {
-      toast({ title: 'Pergunta bloqueada', description: FACTUAL_QUESTION_BLOCK_MESSAGE, variant: 'destructive' });
-      return;
-    }
+    // Filtro factual aplicado server-side em start-culture-session.
+
     try {
       const { error } = await supabase
         .from('values_questions_items')

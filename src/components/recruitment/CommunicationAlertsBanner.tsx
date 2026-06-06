@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { AlertTriangle, Bell, ExternalLink, X } from "lucide-react";
+import { AlertTriangle, Bell, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/dialog";
 import { useRecruitmentCommunicationAlerts } from "@/hooks/useRecruitmentCommunicationAlerts";
 import { cn } from "@/lib/utils";
-import { useNavigate } from "react-router-dom";
 
 function severityBadgeVariant(sev: string): "default" | "secondary" | "destructive" | "outline" {
   if (sev === "critical") return "destructive";
@@ -23,7 +22,6 @@ function severityBadgeVariant(sev: string): "default" | "secondary" | "destructi
 export function CommunicationAlertsBanner() {
   const { alerts, count, canSee, isLoading, resolveAlert, resolving } = useRecruitmentCommunicationAlerts();
   const [open, setOpen] = useState(false);
-  const navigate = useNavigate();
 
   const highestSeverity = useMemo(() => {
     if (!alerts.length) return null;
@@ -63,14 +61,6 @@ export function CommunicationAlertsBanner() {
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => setOpen(true)} disabled={isLoading}>
               Ver alertas
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/atracao-contratacao/recrutamento/logs")}
-            >
-              Abrir logs
-              <ExternalLink className="h-4 w-4 ml-2" />
             </Button>
           </div>
         </div>
