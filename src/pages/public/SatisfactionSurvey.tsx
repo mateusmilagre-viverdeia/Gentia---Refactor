@@ -48,16 +48,16 @@ export default function SatisfactionSurvey() {
     const load = async () => {
       if (!token) return;
       try {
-        const { data: invData, error: invErr } = await (supabase as any)
-          .from("consultant_satisfaction_invites")
-          .select("id, status, expires_at, template_id, consultant_user_id")
-          .eq("token", token)
-          .maybeSingle();
+        // Leitura escopada ao token no SERVIDOR (RPC SECURITY DEFINER) — sem SELECT
+        // direto (a policy pública qual=true foi removida; expunha todos os tokens).
+        const { data: survey, error: rpcErr } = await (supabase as any)
+          .rpc("get_satisfaction_survey_by_token", { p_token: token });
 
-        if (invErr || !invData) {
+        if (rpcErr || !survey) {
           setError("Link inválido ou não encontrado.");
           return;
         }
+        const invData = survey as any;
         if (invData.status !== "pending") {
           setError("Esta avaliação já foi respondida. Obrigado!");
           return;
@@ -67,29 +67,8 @@ export default function SatisfactionSurvey() {
           return;
         }
 
-        const { data: profile } = await (supabase as any)
-          .from("profiles")
-          .select("first_name, last_name")
-          .eq("id", invData.consultant_user_id)
-          .maybeSingle();
-
-        const consultantName = profile
-          ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() || undefined
-          : undefined;
-
-        const { data: qs, error: qErr } = await (supabase as any)
-          .from("consultant_satisfaction_questions")
-          .select("*")
-          .eq("template_id", invData.template_id)
-          .order("order_index", { ascending: true });
-
-        if (qErr) {
-          setError("Não foi possível carregar as perguntas.");
-          return;
-        }
-
-        setInvite({ ...invData, consultant_name: consultantName });
-        setQuestions((qs ?? []) as Question[]);
+        setInvite({ ...invData, consultant_name: invData.consultant_name ?? undefined });
+        setQuestions((invData.questions ?? []) as Question[]);
       } finally {
         setLoading(false);
       }
