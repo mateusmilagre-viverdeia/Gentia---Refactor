@@ -30,7 +30,7 @@ export default function CareersJobPage() {
 
   useEffect(() => {
     if (!slug) return;
-    fetch(`https://axumduklmiiptumdsgtu.supabase.co/functions/v1/careers-public-data?slug=${encodeURIComponent(slug)}`)
+    fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/careers-public-data?slug=${encodeURIComponent(slug)}`)
       .then((r) => r.json())
       .then(setData)
       .finally(() => setLoading(false));
@@ -148,7 +148,7 @@ export default function CareersJobPage() {
         });
       }
 
-      const res = await fetch("https://axumduklmiiptumdsgtu.supabase.co/functions/v1/careers-apply", {
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/careers-apply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

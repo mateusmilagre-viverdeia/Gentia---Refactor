@@ -36,7 +36,7 @@ export default function CareersPublicPage() {
       body: undefined as any,
     });
     // Fetch direto via URL para suportar query params
-    fetch(`https://axumduklmiiptumdsgtu.supabase.co/functions/v1/careers-public-data?slug=${encodeURIComponent(slug)}`)
+    fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/careers-public-data?slug=${encodeURIComponent(slug)}`)
       .then((r) => r.json())
       .then((d) => {
         if (d.error) setError(d.error);

@@ -428,8 +428,7 @@ export const PREMIUM_CHANNELS: PremiumChannel[] = ALL_CHANNELS.filter(ch => ch.c
 
 // Gera URL do feed XML para uma organização
 export function getXmlFeedUrl(accountId: string): string {
-  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || 'axumduklmiiptumdsgtu';
-  return `https://${projectId}.supabase.co/functions/v1/jobs-xml-feed?org=${accountId}`;
+  return `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/jobs-xml-feed?org=${accountId}`;
 }
 
 // Hook para buscar canais configurados da organização
