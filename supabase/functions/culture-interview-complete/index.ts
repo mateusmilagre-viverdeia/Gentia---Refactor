@@ -1449,11 +1449,14 @@ serve(async (req) => {
       required: ["criteriaEvaluations", "overallSummary", "candidateStrengths", "candidateConcerns"],
     } as const;
 
-    // Bug #2 fix: gemini-3-pro-preview retornava "no tool_call and no parsable JSON content"
-    // de forma instável (preview model com schema grande). Trocado para 2.5-pro (estável,
-    // já era o fallback) e fallback agora é gpt-5-mini (provider independente).
-    const PRIMARY_MODEL = await getConfiguredModel("culture-interview-complete", "google/gemini-2.5-pro");
-    const FALLBACK_MODEL = "openai/gpt-4o-mini";
+    // Confiabilidade do tool-call (VALIDADO com dados reais de produção, mai/2026):
+    // modelos "pro"/preview falham com "no tool_call" no schema grande do parecer
+    // (gemini-2.5-pro 0% ok, gemini-3-pro-preview ~20%); os FLASH funcionam (100%).
+    // current_model fica em platform_ai_model_config (hoje: gemini-3-flash-preview).
+    // Default e fallback abaixo usam FLASH para NUNCA regredir se a config sumir.
+    // (No cutover, com LLM_DIRECT_PROVIDERS, dá pra usar Claude como fallback cross-provider.)
+    const PRIMARY_MODEL = await getConfiguredModel("culture-interview-complete", "google/gemini-2.5-flash");
+    const FALLBACK_MODEL = "google/gemini-3-flash-preview";
 
     let aiEvaluation: AIEvaluationResponse = {
       criteriaEvaluations: [],
