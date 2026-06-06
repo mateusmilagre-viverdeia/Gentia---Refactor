@@ -15,7 +15,7 @@
 |---|---|---|
 | a) Segurança | ✅ **Completa** | 100% |
 | b) Observabilidade | ✅ Completa (resta config de cutover) | ~90% |
-| c) Banco de Dados | 🟡 Núcleo feito; falta doc técnica + mapa de tabelas | ~70% |
+| c) Banco de Dados | 🟡 `BANCO_DADOS.md` (doc técnica + mapa de tabelas críticas); queries lentas reais no cutover | ~90% |
 | d) Backup e Recuperação | 🟡 `BACKUP_DR.md`: 7 backups/dia + WAL-G; RPO/RTO + DR + restore doc; PITR (decisão custo) e teste real no cutover | ~70% |
 | e) Infraestrutura e Escalabilidade | 🟡 `INFRA_ESCALA.md`: pooling + cache (impl.) + review + fallback; compute/slow-query no cutover | ~70% |
 | f) Otimização de LLMs | 🟡 Inventário + recomendação + plano (`LLM_AUDIT.md`); impl. e R$/mês no cutover | ~60% |
@@ -49,8 +49,8 @@
 - [x] Análise da estrutura atual → `docs/PERFORMANCE_AUDIT.md`
 - [🟡] Queries lentas + índices de performance → 206 índices FK + RLS InitPlan (1090); **queries lentas reais dependem de `pg_stat_statements`/tráfego → cutover**
 - [x] Revisão de relacionamentos e integridade referencial → análise de FKs + 206 índices + drift FKs
-- [⬜] **Documentação técnica completa do banco** → falta consolidar (há base no PERFORMANCE_AUDIT)
-- [⬜] **Mapeamento das tabelas críticas** (empresas, usuários, candidatos, entrevistas, respostas, avaliações, scores, créditos, permissões, logs) → falta um doc dedicado
+- [x] **Documentação técnica completa do banco** → `docs/BANCO_DADOS.md`
+- [x] **Mapeamento das tabelas críticas** → `BANCO_DADOS.md §3` (empresas, usuários/permissões, candidatos, vagas/candidaturas, entrevistas, avaliações/scores, créditos, IA, logs, pulse)
 - [x] Registro de queries/índices criados + justificativa → `PERFORMANCE_AUDIT.md` + migrations
 - [🟡] Evidência de performance antes/depois → advisor 2664→1476; **antes/depois por query no cutover**
 - [x] Plano técnico de escala 12 meses → `PERFORMANCE_AUDIT.md §5`
@@ -85,7 +85,7 @@
 
 ## g) Entregáveis (artefatos para aceite)
 - [🟡] Relatório de auditoria antes/depois → `SECURITY_AUDIT.md` + `PERFORMANCE_AUDIT.md` (consolidar 1 sumário executivo)
-- [⬜] Documentação técnica completa do banco (ver c)
+- [x] Documentação técnica completa do banco → `docs/BANCO_DADOS.md`
 - [x] Lista de tabelas revisadas e RLS ajustadas → `SECURITY_AUDIT.md`
 - [x] Evidência de teste de isolamento multi-tenant → `SECURITY_AUDIT.md §9`
 - [x] Lista de Edge Functions revisadas/corrigidas/otimizadas → `INFRA_ESCALA.md §3` (segurança + cache + IA)
@@ -98,7 +98,7 @@
 - [⬜] Reunião de handoff ao término
 
 ## h) Critérios de Aceite (libera 2ª parcela) — espelho dos itens acima
-✅ Relatório antes/depois · ⬜ Banco documentado · 🟡 Queries críticas otimizadas · ✅ RLS revisado nas críticas · ✅ Isolamento testado e documentado · 🟡 Secrets/variáveis revisados · ✅ Edge Functions críticas revisadas · ✅ Logs e alertas configurados · 🟡 Dashboards mínimos ativos · ✅ Mapeamento de chamadas LLM · ✅ Recomendações de modelos documentadas · ✅ Plano de backup entregue · ⬜ Reunião de handoff.
+✅ Relatório antes/depois · ✅ Banco documentado · 🟡 Queries críticas otimizadas · ✅ RLS revisado nas críticas · ✅ Isolamento testado e documentado · 🟡 Secrets/variáveis revisados · ✅ Edge Functions críticas revisadas · ✅ Logs e alertas configurados · 🟡 Dashboards mínimos ativos · ✅ Mapeamento de chamadas LLM · ✅ Recomendações de modelos documentadas · ✅ Plano de backup entregue · ⬜ Reunião de handoff.
 
 ## i) FORA do escopo (não fazer — proposta apartada)
 Novas funcionalidades · suporte pós-garantia · redesign UX/UI · novos módulos · **refatoração completa do front** · **migração completa p/ outra cloud/banco** · fine-tuning de IA próprio · agente de IA do zero · **pentest formal certificado** · **auditoria jurídica de LGPD** · suporte 24/7 · correção de bugs fora das frentes.
