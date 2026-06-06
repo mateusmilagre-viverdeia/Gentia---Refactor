@@ -73,14 +73,8 @@ curl -s -H "Authorization: Bearer $TOKEN" -X POST "$Q" -H "Content-Type: applica
 **Gate 4:** PITR ativo (`pitr_enabled=true`) + evidência do teste de restore documentada.
 
 ## Fase 5 — Crons + URLs hardcoded
-1. **Reapontar os 6 crons** (hoje chamam `axumduklmiiptumdsgtu.supabase.co`) para o destino, com o anon key novo + `x-cron-secret`:
-   ```sql
-   -- exemplo p/ cada job (cron.job): atualizar url/headers do net.http_post p/ https://<REF>.supabase.co/...
-   select jobname, schedule from cron.job;
-   -- usar cron.alter_job / recriar com a URL e headers corretos
-   ```
-2. **Agendar** o `ops-health-monitor` (Frente B) — SQL pronto em `OBSERVABILITY.md §5`.
-3. **Atualizar a chrome-extension** (`manifest.json` host_permissions + `popup.js` `SUPABASE_URL`) p/ o destino e **republicar** (o front já é env-driven — careers/feed usam `VITE_SUPABASE_URL`, commit `a69ff69`).
+1. **Reapontar crons + agendar monitor:** rodar o script pronto **`scripts/cutover_repoint_crons.sql`** (substituir `<DEST_ANON_KEY>` e `<CRON_SECRET>` reais). Ele reaponta os **4 crons** que chamavam a origem (`calculate-account-health`, `expire-trials`, `generate-indeed-feed`, `sla-monitor`), **preserva os 2 SQL-puro** (`daily-expire-proposals`, `process-one-on-one-recurrences`) e **agenda o `ops-health-monitor`** (Frente B). Verificação inclusa no fim do script.
+2. **Atualizar a chrome-extension** (`manifest.json` host_permissions + `popup.js` `SUPABASE_URL`) p/ o destino e **republicar** (o front já é env-driven — careers/feed usam `VITE_SUPABASE_URL`, commit `a69ff69`).
 **Gate 5:** nenhum cron aponta p/ a origem; `grep -r axumduklmiiptumdsgtu` no repo = 0 (fora de docs/migrations históricas).
 
 ## Fase 6 — Front
