@@ -65,6 +65,25 @@ Custo/chamada com Claude (preços oficiais, tokens do mapping):
 
 > Comparativo R$/mês total fica para o cutover, multiplicando estes custos/chamada pelo **volume real** (`ai_execution_logs` da produção). Premissa: ao sair do gateway, o custo dos modelos **mantidos** cai pelo % do markup do Lovable (a confirmar com a fatura).
 
+### 5.1 Comparativo de custo total (com premissas documentadas)
+**Premissas (ajustáveis):** volume/mês ≈ **30,3k chamadas** (40 empresas): screening 15k · cultural_match 6k · candidate_ranking 3k · disc 2,5k · parecer cultura 1,5k · parecer técnico 1,5k · job description 0,8k. Tokens por feature = **reais** (`feature_llm_mapping`). **Claude = preço oficial**; **Gemini = referência pública (confirmar)**; **markup Lovable desconhecido (modelado 2×)**; câmbio **R$ 5,50/US$**. Totais **escalam linear com o volume**.
+
+| Estratégia | US$/mês | R$/mês | R$/ano | vs. atual |
+|---|--:|--:|--:|--:|
+| **A. Hoje** — Gemini + markup ~2× | $106 | R$ 581 | R$ 6.974 | — |
+| **B. Gemini DIRETO** (tira markup, mesmos modelos) | $53 | R$ 291 | R$ 3.487 | **−50%** |
+| **C. Híbrido** — Gemini direto + Claude **Haiku** nos pareceres | $70 | R$ 387 | R$ 4.646 | **−33%** ✅ rec. |
+| **D. Híbrido** — Gemini direto + Claude **Sonnet** nos pareceres | $133 | R$ 734 | R$ 8.804 | +26% |
+| **E. Tudo Claude** (Haiku leve + Sonnet pareceres) | $193 | R$ 1.060 | R$ 12.718 | +82% |
+
+**Custo/chamada (referência):** screening — Gemini-lite $0,00016 vs Haiku $0,0018 (~11×); parecer (3k/1,5k) — Gemini $0,0047 · Haiku $0,0105 · Sonnet $0,0315; job description (texto longo) — Haiku $0,011 **< Gemini Pro $0,021**.
+
+**Conclusões:**
+- 💰 **Economia de dinheiro vem de sair do gateway** (ir direto) — sozinho corta ~50% (com markup 2×; escala com o markup real). **Trocar tudo por Claude (E) custa MAIS** — Gemini Flash é mais barato por token.
+- 🎯 **Claude é jogada de qualidade nos pareceres.** Estratégia **C** (Haiku nos pareceres) ainda economiza ~33% vs hoje **e** põe Claude na decisão que importa; **D** (Sonnet) é topo de qualidade a +26%.
+- **Recomendação: C** (com opção de subir pareceres para Sonnet após A/B de qualidade).
+- **Travar no cutover:** volume real (`ai_execution_logs`), % de markup (fatura Lovable), preço público vigente do Gemini.
+
 ## 6. Desacoplamento do Lovable Gateway — plano (NÃO implementado)
 Como o wrapper já é OpenAI-compatible e os modelos são `provider/model`, a mudança é **localizada no `llm-tool-call.ts`** (roteia por prefixo), sem tocar as 85 functions:
 

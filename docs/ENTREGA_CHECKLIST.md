@@ -76,10 +76,10 @@
 - [x] Avaliação de modelos/provedores (custo × desempenho) → §4-5 (preços oficiais Claude + recomendação)
 - [🟡] Otimização de prompts e consumo de tokens → §8 (caching/right-sizing documentados; aplicar na impl.)
 - [🟡] Cache de respostas + fallback entre modelos → §7-8 (desenhado; implementar com a reescrita)
-- [🟡] Projeção de custo por escala → §5 (custo/chamada pronto; R$/mês total no cutover c/ volume real)
+- [🟡] Projeção de custo por escala → §5.1 (tabela A–E com premissas; escala linear; números finais no cutover c/ volume real)
 - [x] Mapeamento das chamadas LLM por fluxo → §2 (`feature_llm_mapping` + `v_ops_ai_by_function`)
 - [x] Recomendação de modelo/provedor por tipo de tarefa (incl. **Claude**) → §5
-- [🟡] Comparativo custo atual × projetado → §3-5 (framework + premissas; total no cutover)
+- [🟡] Comparativo custo atual × projetado → §5.1 (tabela Gemini×direto×Claude em R$/mês e R$/ano; premissas documentadas; travar volume/markup no cutover)
 - [🟡] Fallback p/ falhas de LLM → §7 (cadeias por feature desenhadas; implementar)
 - [🟡] **Desacoplar Lovable Gateway → provedores diretos** → §6 (plano da reescrita do wrapper; **não implementado**, por decisão)
 
