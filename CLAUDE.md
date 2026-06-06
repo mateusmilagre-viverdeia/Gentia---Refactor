@@ -197,6 +197,11 @@ Já existe trabalho prévio documentado em [`docs/SECURITY.md`](docs/SECURITY.md
 - `psql` DIRECT (`db.<ref>.supabase.co`) tem **DNS/IPv6 intermitente** → para inspeção use a **query API HTTPS**: `POST https://api.supabase.com/v1/projects/<ref>/database/query` (estável). Para migrations, `supabase db push`.
 - pg tools instaladas em `/opt/homebrew/opt/libpq/bin` (psql/pg_dump **18.4**). Runtimes JS: **bun** + node (deno ausente).
 
+### ⚠️ Divergência de branch + sync do Lovable (2026-06-06)
+- **`origin/main` divergiu da refatoração**: `main` = `b3808f3` (início) + commits do **Lovable** (produção continua lá); minha branch `claude/silly-mccarthy-8c0c30` = `b3808f3` + toda a refatoração (Frentes A/B/C). Merge-base = `b3808f3`. **No cutover, reconciliar main (Lovable) × refactor.**
+- **Sync aplicado** do commit `07647c9` ("fix: function"): trazidos só os **arquivos de backend Supabase** (sem clobber das minhas functions) e deployados no destino — commit `4014971`. Conteúdo: `_shared/resolveCulturalAgent.ts` (novo) + **14 edge functions** (seats/checkout, culture-interview-*, interview-conductor/watchdog, detect-voice-anomalies…) v3 ACTIVE; migration `20260605135702` = **data-fix de DISC** (no-op no destino, não é RPC/schema). Deps de schema (9 tabelas) verificadas OK. **Front-end do 07647c9 (20 arquivos) NÃO trazido** (fora do pedido).
+- ⚠️ **Secrets de runtime ausentes no destino**: só os 8 padrão + `CRON_SECRET` (teste). Functions que chamam APIs externas (Stripe em `create-seats-checkout`, LLM em `culture-interview-*`) deployam mas **dão erro até configurar os secrets** (Stripe/LLM/etc.) — passo do cutover.
+
 ## 9. Comandos Úteis
 
 ```sh
