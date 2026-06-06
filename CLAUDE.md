@@ -27,10 +27,10 @@ O produto (**Gentia**) foi originalmente construído no **Lovable + Lovable Clou
 - [x] **Segurança backend** (Frente A ✅): RLS em 415/415 tabelas (com policy), vazamento de PII do portal fechado, endpoints públicos auditados (3 de alto risco corrigidos), isolamento multi-tenant provado. Ver §8.5 "Frente A" e `docs/SECURITY_AUDIT.md`. _(Revisão fina de `service_role` por função e auditoria de secrets vazados ocorre no cutover, com os secrets reais.)_
 - [~] **Performance/queries** (Frente C): RLS InitPlan otimizado (1090 policies), 206 índices de FK criados, 46 redundâncias removidas (advisor 2664→1476). Planos/queries pesadas e `unused_index` dependem de tráfego real → cutover. Ver `docs/PERFORMANCE_AUDIT.md`.
 - [ ] **Migração Lovable Cloud → Supabase dedicado**: migrar schema (477 migrations), 284 edge functions, secrets, storage, auth, cron jobs; validar paridade.
-- [ ] **Escala/infra**: dimensionar instância, connection pooling (pgbouncer/supavisor), limites, observabilidade.
-- [ ] **Auditoria de IA**: inventário de chamadas, modelos por feature, custo estimado, e **proposta de alternativas** (Anthropic, modelos econômicos, caching, batch).
-- [ ] **Desacoplar do Lovable AI Gateway** (ver §6 — risco central da migração).
-- [ ] **Trocar refs/URLs hardcoded** de `axumduklmiiptumdsgtu` (16 ocorrências: `chrome-extension/manifest.json`, `src/pages/careers/*`, `src/hooks/useJobDistribution.ts`) pelo novo backend ou pelas envs `VITE_SUPABASE_*`.
+- [~] **Escala/infra** (Frente E): pooling (REST/Supavisor) + cache (`getConfiguredModel`) + fallback documentados (`docs/INFRA_ESCALA.md`); dimensionar compute no cutover.
+- [x] **Auditoria de IA** (Frente F): inventário + custo + recomendação (Claude/econômicos/caching/batch) → `docs/LLM_AUDIT.md` + `PLANO_EFICIENCIA_OPERACAO.md`.
+- [~] **Desacoplar do Lovable AI Gateway**: wrapper roteável implementado **atrás de flag** (`LLM_DIRECT_PROVIDERS`, default OFF; commit `302f927`) + Claude provado; ativar no cutover.
+- [~] **Trocar refs/URLs hardcoded** de `axumduklmiiptumdsgtu` → **front feito** (careers + `useJobDistribution` usam `VITE_SUPABASE_URL`, commit `a69ff69`); **resta só `chrome-extension/`** (`manifest.json` + `popup.js` — JSON estático/republicação no cutover).
 
 ---
 

@@ -24,7 +24,7 @@ Fase 1 (R$6k / 45 dias): estruturação de **Segurança, Banco, Infra/Escala, LL
 - **Secrets:** 14 secrets do cliente validados e salvos no destino; `GEMINI_API_KEY` criada (placeholder). Inventário em `SECRETS_INVENTORY.md`.
 
 ## 4. Riscos remanescentes
-- **Front pendente (fora do escopo Fase 1):** portal de cliente e marketplace ainda precisam consumir signed URLs / a function `portal-data` (documentado em `SECURITY_AUDIT §7` e §10.1).
+- **Front pendente:** marketplace ✅ (signed URLs, `07d1ff8`) e careers ✅ (env-driven, `a69ff69`); **resta só o portal** consumir `portal-data` (`SECURITY_AUDIT §7`/§10.1) e a **chrome-extension** apontar p/ o destino (cutover).
 - **`multiple_permissive_policies` (848)** e **`unused_index`** → consolidar/reavaliar com **tráfego real** (cutover) — `PERFORMANCE_AUDIT §4`.
 - **PITR desabilitado** → RPO 24h até habilitar (decisão de custo) — `BACKUP_DR`.
 - **DR cross-region** não é padrão (registrar como risco se o negócio exigir).
@@ -37,7 +37,7 @@ Fase 1 (R$6k / 45 dias): estruturação de **Segurança, Banco, Infra/Escala, LL
 2. **Ativar IA direta:** popular `GEMINI_API_KEY` real → `LLM_DIRECT_PROVIDERS=true` → redeploy → validar feature a feature → fechar a economia real com a fatura do Lovable.
 3. **Habilitar PITR** (RPO 24h → ~2min) + **teste de restore real** em clone (cronometrar RTO).
 4. **Reapontar** os 6 crons + agendar `ops-health-monitor` (hoje apontam p/ a origem `axumduklmiiptumdsgtu`); plugar `DISCORD_WEBHOOK_URL` real.
-5. **Trocar refs hardcoded** de `axumduklmiiptumdsgtu` (16 ocorrências: chrome-extension, careers, useJobDistribution) p/ o novo backend.
+5. **Atualizar a chrome-extension** (`manifest.json` + `popup.js`) p/ o destino e republicar (front já env-driven — `a69ff69`).
 6. **Front:** portal/marketplace via signed URLs.
 7. **Dimensionar compute** + slow-query pass (`pg_stat_statements`) + consolidar policies nas tabelas quentes.
 

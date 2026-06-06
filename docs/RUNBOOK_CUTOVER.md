@@ -80,7 +80,7 @@ curl -s -H "Authorization: Bearer $TOKEN" -X POST "$Q" -H "Content-Type: applica
    -- usar cron.alter_job / recriar com a URL e headers corretos
    ```
 2. **Agendar** o `ops-health-monitor` (Frente B) — SQL pronto em `OBSERVABILITY.md §5`.
-3. **Trocar as 16 refs hardcoded** de `axumduklmiiptumdsgtu` no código (chrome-extension/manifest, careers, `useJobDistribution.ts`) pelas envs `VITE_SUPABASE_*` do destino.
+3. **Atualizar a chrome-extension** (`manifest.json` host_permissions + `popup.js` `SUPABASE_URL`) p/ o destino e **republicar** (o front já é env-driven — careers/feed usam `VITE_SUPABASE_URL`, commit `a69ff69`).
 **Gate 5:** nenhum cron aponta p/ a origem; `grep -r axumduklmiiptumdsgtu` no repo = 0 (fora de docs/migrations históricas).
 
 ## Fase 6 — Front
