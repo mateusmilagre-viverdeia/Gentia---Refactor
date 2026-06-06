@@ -110,7 +110,7 @@ Novas funcionalidades · suporte pós-garantia · redesign UX/UI · novos módul
 1. Reapontar 6 crons + agendar `ops-health-monitor` (hoje apontam p/ origem Lovable); rotacionar `CRON_SECRET`.
 2. Secrets faltantes do cliente (ver `SECRETS_INVENTORY.md` — 14 não-opcionais de hunting/WhatsApp/enriquecimento).
 3. Queries lentas reais + `unused_index` (com `pg_stat_statements` e tráfego).
-4. Front: **portal** via `portal-data` (marketplace ✅ `07d1ff8`); **chrome-extension** → destino (careers/feed já env-driven, `a69ff69`).
+4. Front: ✅ feito (marketplace `07d1ff8`, careers `a69ff69`, **portal `b78a0a3`**). Resta só a **chrome-extension** → destino (republicação).
 5. Migração de dados + storage + Auth origem→destino.
 
 *Última atualização: 2026-06-06.*
