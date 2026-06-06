@@ -84,7 +84,7 @@
 - [🟡] **Desacoplar Lovable Gateway → provedores diretos** → §6 **IMPLEMENTADO atrás de flag** (`LLM_DIRECT_PROVIDERS`, default OFF; commit `302f927`; 4 functions, bundle validado). Ativar no cutover: popular `GEMINI_API_KEY` + ligar flag.
 
 ## g) Entregáveis (artefatos para aceite)
-- [🟡] Relatório de auditoria antes/depois → `SECURITY_AUDIT.md` + `PERFORMANCE_AUDIT.md` (consolidar 1 sumário executivo)
+- [x] Relatório de auditoria antes/depois → `SECURITY_AUDIT.md` + `PERFORMANCE_AUDIT.md`, consolidado em `HANDOFF.md §2`
 - [x] Documentação técnica completa do banco → `docs/BANCO_DADOS.md`
 - [x] Lista de tabelas revisadas e RLS ajustadas → `SECURITY_AUDIT.md`
 - [x] Evidência de teste de isolamento multi-tenant → `SECURITY_AUDIT.md §9`
@@ -93,9 +93,9 @@
 - [x] Plano de backup e recuperação → `docs/BACKUP_DR.md`
 - [x] Runbook básico de resposta a incidentes → `RUNBOOK_INCIDENTES.md`
 - [x] Análise comparativa de LLMs com recomendação → `docs/LLM_AUDIT.md`
-- [⬜] Guia de boas práticas para desenvolvimento de novas funcionalidades
-- [⬜] Documento de handoff técnico (o que/onde/por que mudou + riscos + próxima fase)
-- [⬜] Reunião de handoff ao término
+- [x] Guia de boas práticas para desenvolvimento de novas funcionalidades → `docs/GUIA_BOAS_PRATICAS.md`
+- [x] Documento de handoff técnico (o que/onde/por que mudou + riscos + próxima fase) → `docs/HANDOFF.md`
+- [⬜] Reunião de handoff ao término → **com o cliente** (pauta em `HANDOFF.md §7`)
 
 ## h) Critérios de Aceite (libera 2ª parcela) — espelho dos itens acima
 ✅ Relatório antes/depois · ✅ Banco documentado · 🟡 Queries críticas otimizadas · ✅ RLS revisado nas críticas · ✅ Isolamento testado e documentado · 🟡 Secrets/variáveis revisados · ✅ Edge Functions críticas revisadas · ✅ Logs e alertas configurados · 🟡 Dashboards mínimos ativos · ✅ Mapeamento de chamadas LLM · ✅ Recomendações de modelos documentadas · ✅ Plano de backup entregue · ⬜ Reunião de handoff.
