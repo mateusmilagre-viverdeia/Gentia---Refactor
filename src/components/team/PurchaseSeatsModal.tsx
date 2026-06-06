@@ -50,7 +50,12 @@ interface PriceInfo {
   subscriptionId: string;
   seatSubscriptionItemId: string | null;
   seatPriceId: string;
+  basePlanPriceId?: string | null;
   unitPrice: number;
+  requiresNewSubscription?: boolean;
+  grantApplied?: boolean;
+  freeSeats?: number;
+  paidSeats?: number;
 }
 
 const SEAT_PRICE_BRL = 19.90;
@@ -110,7 +115,9 @@ export function PurchaseSeatsModal({
         body: {
           account_id: accountId,
           quantity: quantity,
-          price_id: priceInfo?.seatPriceId || 'price_1RHqWXLTBUDFdRj5VYpVDawg',
+          price_id: priceInfo?.seatPriceId || 'price_1SizCUKV6gEseQSlCVl5Wo4x',
+          base_plan_price_id: priceInfo?.basePlanPriceId,
+          is_new_subscription: priceInfo?.requiresNewSubscription,
         },
       });
 
@@ -246,44 +253,87 @@ export function PurchaseSeatsModal({
               </div>
             ) : priceInfo ? (
               <div className="space-y-3">
-                {/* Pro-rata payment now */}
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm text-muted-foreground">
-                      Pagamento agora
-                    </span>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-xs">
-                          <p className="text-xs">
-                            <strong>Cálculo pro-rata:</strong> Você paga apenas pelos {priceInfo.remainingDays} dias restantes até o próximo ciclo de cobrança.
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-xl font-bold text-primary">
-                      R$ {priceInfo.proRataCharge.toFixed(2)}
-                    </span>
-                    <p className="text-xs text-muted-foreground">
-                      ({priceInfo.remainingDays} dias restantes)
+                {priceInfo.grantApplied && (
+                  <div className="flex items-center gap-2 text-green-700 bg-green-50 p-2 rounded border border-green-100">
+                    <CheckCircle className="h-4 w-4 shrink-0" />
+                    <p className="text-xs">
+                      <strong>Cortesia ativa</strong>
+                      {priceInfo.freeSeats ? ` · ${priceInfo.freeSeats} assento(s) gratuito(s)` : ''} ·
+                      mensalidade do plano base isenta.
                     </p>
                   </div>
-                </div>
+                )}
+                {/* Pro-rata payment now */}
+                {priceInfo.requiresNewSubscription ? (
+                  <div className="space-y-3">
+                    {!priceInfo.grantApplied && (
+                      <div className="flex items-center gap-2 text-amber-600 bg-amber-50 p-2 rounded border border-amber-100">
+                        <Info className="h-4 w-4 shrink-0" />
+                        <p className="text-xs">
+                          Sua organização não possui assinatura ativa. Ao continuar, você criará uma nova assinatura para o plano base e os assentos extras.
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-medium">
+                          Total da assinatura
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xl font-bold text-primary">
+                          R$ {priceInfo.newMonthlyAmount.toFixed(2)}
+                        </span>
+                        <p className="text-xs text-muted-foreground">
+                          {priceInfo.paidSeats === 0 ? 'sem cobrança' : 'primeiro pagamento agora'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm text-muted-foreground">
+                        Pagamento agora
+                      </span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p className="text-xs">
+                              <strong>Cálculo pro-rata:</strong> Você paga apenas pelos {priceInfo.remainingDays} dias restantes até o próximo ciclo de cobrança.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xl font-bold text-primary">
+                        R$ {priceInfo.proRataCharge.toFixed(2)}
+                      </span>
+                      <p className="text-xs text-muted-foreground">
+                        ({priceInfo.remainingDays} dias restantes)
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 <Separator />
 
                 {/* Next billing cycle - detailed breakdown */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-1.5 mb-2">
-                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                    {priceInfo.requiresNewSubscription ? (
+                      <CheckCircle className="h-3.5 w-3.5 text-green-600" />
+                    ) : (
+                      <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                    )}
                     <span className="text-sm font-medium">
-                      Próximo ciclo
-                      {priceInfo.nextBillingDate && (
+                      {priceInfo.requiresNewSubscription ? 'Detalhes da assinatura' : 'Próximo ciclo'}
+                      {priceInfo.nextBillingDate && !priceInfo.requiresNewSubscription && (
                         <span className="font-normal text-muted-foreground ml-1">
                           ({formatNextBillingDate(priceInfo.nextBillingDate)})
                         </span>
@@ -308,7 +358,14 @@ export function PurchaseSeatsModal({
                     )}
                     
                     <div className="flex justify-between text-primary font-medium">
-                      <span>+ {quantity} novo{quantity > 1 ? 's' : ''} assento{quantity > 1 ? 's' : ''}</span>
+                      <span>
+                        + {quantity} novo{quantity > 1 ? 's' : ''} assento{quantity > 1 ? 's' : ''}
+                        {priceInfo.grantApplied && typeof priceInfo.paidSeats === 'number' && priceInfo.paidSeats < quantity && (
+                          <span className="ml-1 text-xs text-green-700 font-normal">
+                            ({quantity - priceInfo.paidSeats} grátis · {priceInfo.paidSeats} pago)
+                          </span>
+                        )}
+                      </span>
                       <span>R$ {priceInfo.increaseAmount.toFixed(2)}</span>
                     </div>
                   </div>
@@ -365,7 +422,11 @@ export function PurchaseSeatsModal({
             ) : (
               <>
                 <CheckCircle className="h-4 w-4 mr-2" />
-                Confirmar Compra
+                {priceInfo?.grantApplied && priceInfo.paidSeats === 0
+                  ? 'Adicionar assentos gratuitos'
+                  : priceInfo?.requiresNewSubscription
+                  ? (priceInfo?.grantApplied ? 'Assinar assentos' : 'Assinar plano + assento(s)')
+                  : 'Confirmar Compra'}
               </>
             )}
           </Button>

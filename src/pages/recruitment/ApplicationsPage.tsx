@@ -39,7 +39,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Search, MoreHorizontal, Link as LinkIcon, FileText, UserCheck, ChevronRight, X } from "lucide-react";
+import { Search, MoreHorizontal, Link as LinkIcon, FileText, UserCheck, ChevronRight, X, Mic, FileSignature, ClipboardCheck, AlertTriangle } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -47,6 +47,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 import { HireCandidateDialog } from "@/components/recruitment/HireCandidateDialog";
 import { useRecruitmentActions } from "@/hooks/useRecruitmentActions";
@@ -56,18 +64,44 @@ import { BulkActionsBar } from "@/components/recruitment/BulkActionsBar";
 import { DiscBatchByFilterDialog } from "@/components/recruitment/DiscBatchByFilterDialog";
 import { useAccount } from "@/hooks/useAccount";
 import { formatBRT } from "@/lib/datetime";
+import { useRecruitmentSessions } from "@/hooks/useRecruitmentSessions";
+import {
+  bucketAgeHours,
+  EMPTY_SESSIONS,
+  getAttemptCount,
+  indexSessionsByCandidateJob,
+  summarizeHealth,
+  type HealthLevel,
+} from "@/lib/applicationHealth";
 
 const APPLICATION_STATUS_OPTIONS = [
   { value: "all", label: "Todos os status" },
+  { value: "new", label: "Novo" },
   { value: "applied", label: "Aplicado" },
   { value: "screening", label: "Triagem" },
-  { value: "interview", label: "Entrevista" },
-  { value: "disc", label: "Fit Comportamental (DISC)" },
-  { value: "evaluation", label: "Avaliação" },
+  { value: "disc", label: "Fit Comportamental" },
+  { value: "cultural_fit", label: "Fit Cultural" },
+  { value: "technical", label: "Entrevista Técnica" },
+  { value: "evaluation", label: "Em Avaliação" },
   { value: "offer", label: "Proposta" },
   { value: "hired", label: "Contratado" },
   { value: "desqualificado", label: "Desqualificado" },
   { value: "rejected", label: "Rejeitado" },
+];
+
+const HEALTH_OPTIONS = [
+  { value: "all", label: "Toda saúde" },
+  { value: "healthy", label: "Saudáveis" },
+  { value: "warning", label: "Com alerta" },
+  { value: "critical", label: "Críticas" },
+];
+
+const AGE_OPTIONS = [
+  { value: "all", label: "Qualquer idade" },
+  { value: "fresh", label: "Até 1 dia" },
+  { value: "recent", label: "1–3 dias" },
+  { value: "week", label: "3–7 dias" },
+  { value: "old", label: "Mais de 7 dias" },
 ];
 
 const ApplicationsPage = () => {
@@ -76,6 +110,8 @@ const ApplicationsPage = () => {
   const { canManageRH } = useAccount();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [healthFilter, setHealthFilter] = useState("all");
+  const [ageFilter, setAgeFilter] = useState("all");
   const [selectedApplications, setSelectedApplications] = useState<string[]>([]);
   const [discFilterDialogOpen, setDiscFilterDialogOpen] = useState(false);
   const [hireDialogOpen, setHireDialogOpen] = useState(false);
@@ -161,8 +197,17 @@ const ApplicationsPage = () => {
     interviewsData.map((i) => [i.application_id, i.status])
   );
 
+  // Unified sessions (cultural / disc / technical) for health + attempt insights
+  const { data: unifiedSessions = [] } = useRecruitmentSessions(
+    currentAccount?.id ? { accountId: currentAccount.id } : null
+  );
+  const sessionsIndex = useMemo(
+    () => indexSessionsByCandidateJob(unifiedSessions),
+    [unifiedSessions]
+  );
+
   const applications: ApplicationData[] = applicationsData.map((a: any) => {
-    const candidateName = a.candidate 
+    const candidateName = a.candidate
       ? `${a.candidate.first_name} ${a.candidate.last_name || ""}`.trim()
       : "Candidato";
     const candidateEmail = a.candidate?.email || "";
@@ -188,14 +233,43 @@ const ApplicationsPage = () => {
       appliedAt: new Date(a.applied_at || Date.now()),
       evaluatedAt: isEvaluated && a.updated_at ? new Date(a.updated_at) : null,
       matchingScore: scoreMap.get(`${candidateId}-${jobId}`) ?? null,
-    };
+      updatedAt: new Date(a.updated_at || a.applied_at || Date.now()),
+      doNotReapproach: !!a.do_not_reapproach,
+    } as ApplicationData & { updatedAt: Date; doNotReapproach: boolean };
   });
 
-  const filteredApplications = applications.filter((app) => {
-    const matchesSearch = app.candidateName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  // Enrich with derived health + attempts
+  type EnrichedApplication = ApplicationData & {
+    updatedAt: Date;
+    doNotReapproach: boolean;
+    health: ReturnType<typeof summarizeHealth>;
+    attempts: number;
+  };
+
+  const enrichedApplications: EnrichedApplication[] = useMemo(
+    () =>
+      (applications as any[]).map((app) => {
+        const sessions =
+          sessionsIndex.get(`${app.candidateId}-${app.jobId}`) ?? EMPTY_SESSIONS;
+        const health = summarizeHealth(
+          app.status,
+          app.updatedAt,
+          sessions,
+          app.doNotReapproach
+        );
+        return { ...app, health, attempts: getAttemptCount(sessions) };
+      }),
+    [applications, sessionsIndex]
+  );
+
+  const filteredApplications = enrichedApplications.filter((app) => {
+    const matchesSearch =
+      app.candidateName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       app.jobTitle.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || app.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesHealth = healthFilter === "all" || app.health.level === healthFilter;
+    const matchesAge = ageFilter === "all" || bucketAgeHours(app.health.ageHours) === ageFilter;
+    return matchesSearch && matchesStatus && matchesHealth && matchesAge;
   });
 
   const discTargets = useMemo(() => {
@@ -327,6 +401,26 @@ const ApplicationsPage = () => {
               </Button>
             )}
           </div>
+          <Select value={healthFilter} onValueChange={setHealthFilter}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Saúde" />
+            </SelectTrigger>
+            <SelectContent>
+              {HEALTH_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={ageFilter} onValueChange={setAgeFilter}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Idade na etapa" />
+            </SelectTrigger>
+            <SelectContent>
+              {AGE_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <ViewToggle viewMode={viewMode} onViewModeChange={setViewMode} />
           {canManageRH && currentAccount?.id && (
             <Button variant="outline" onClick={() => setDiscFilterDialogOpen(true)}>
@@ -362,6 +456,7 @@ const ApplicationsPage = () => {
           )
         ) : (
           <div className="border rounded-lg">
+            <TooltipProvider delayDuration={150}>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -373,10 +468,11 @@ const ApplicationsPage = () => {
                   </TableHead>
                   <TableHead>Candidato</TableHead>
                   <TableHead>Vaga</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Etapa</TableHead>
+                  <TableHead>Saúde</TableHead>
                   <TableHead>Entrevista</TableHead>
                   <TableHead>Aplicou em</TableHead>
-                  <TableHead>Avaliado em</TableHead>
+                  <TableHead>Última atividade</TableHead>
                   <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -389,6 +485,7 @@ const ApplicationsPage = () => {
                       <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-20" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-20" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-8" /></TableCell>
@@ -396,7 +493,7 @@ const ApplicationsPage = () => {
                   ))
                 ) : filteredApplications.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-32 text-center">
+                    <TableCell colSpan={9} className="h-32 text-center">
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <FileText className="h-8 w-8" />
                         <p>Nenhuma aplicação encontrada</p>
@@ -404,7 +501,20 @@ const ApplicationsPage = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredApplications.map((application) => (
+                  filteredApplications.map((application) => {
+                    const healthDotClass =
+                      application.health.level === "critical"
+                        ? "bg-rose-500"
+                        : application.health.level === "warning"
+                        ? "bg-amber-500"
+                        : "bg-emerald-500";
+                    const healthLabel =
+                      application.health.level === "critical"
+                        ? "Crítica"
+                        : application.health.level === "warning"
+                        ? "Com alerta"
+                        : "Saudável";
+                    return (
                     <TableRow key={application.id}>
                       <TableCell>
                         <Checkbox
@@ -420,7 +530,14 @@ const ApplicationsPage = () => {
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="font-medium">{application.candidateName}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">{application.candidateName}</p>
+                              {application.attempts > 1 && (
+                                <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-normal">
+                                  {application.attempts} tentativas
+                                </Badge>
+                              )}
+                            </div>
                             <p className="text-xs text-muted-foreground">{application.candidateEmail}</p>
                           </div>
                         </div>
@@ -435,6 +552,30 @@ const ApplicationsPage = () => {
                         <StatusBadge status={application.status} />
                       </TableCell>
                       <TableCell>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="inline-flex items-center gap-1.5 cursor-default">
+                              <span className={`inline-block h-2 w-2 rounded-full ${healthDotClass}`} />
+                              <span className="text-xs text-muted-foreground">{healthLabel}</span>
+                              {application.health.failedSession && (
+                                <AlertTriangle className="h-3 w-3 text-rose-500" />
+                              )}
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            {application.health.reasons.length > 0 ? (
+                              <ul className="text-xs space-y-0.5">
+                                {application.health.reasons.map((r, idx) => (
+                                  <li key={idx}>• {r}</li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="text-xs">Sem alertas. Última atividade há {formatDistanceToNow(application.updatedAt, { locale: ptBR })}.</p>
+                            )}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell>
                         {application.interviewStatus ? (
                           <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
                             CONCLUÍDA
@@ -447,7 +588,16 @@ const ApplicationsPage = () => {
                         {formatBRT(application.appliedAt, "dd/MM/yyyy")}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {application.evaluatedAt ? formatBRT(application.evaluatedAt, "dd/MM/yyyy") : "-"}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="text-xs cursor-default">
+                              há {formatDistanceToNow(application.updatedAt, { locale: ptBR })}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs">{formatBRT(application.updatedAt, "dd/MM/yyyy HH:mm")}</p>
+                          </TooltipContent>
+                        </Tooltip>
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -499,10 +649,12 @@ const ApplicationsPage = () => {
                         </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  ))
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
+            </TooltipProvider>
           </div>
         )}
       </div>

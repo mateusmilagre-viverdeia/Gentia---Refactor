@@ -3,11 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface DebugTimelineEvent {
   ts: string;
-  kind: "session" | "response" | "anomaly";
+  kind: "session" | "response" | "anomaly" | "event";
   label: string;
   detail?: string;
   payload?: Record<string, unknown>;
+  severity?: "info" | "warning" | "critical";
 }
+
 
 export interface InterviewDebugData {
   session: any;
@@ -34,7 +36,7 @@ export function useInterviewDebugData(sessionId?: string) {
         .single();
       if (sErr) throw sErr;
 
-      const [{ data: responses }, { data: anomalies }] = await Promise.all([
+      const [{ data: responses }, { data: anomalies }, { data: voiceEvents }] = await Promise.all([
         supabase
           .from("culture_interview_responses")
           .select("*")
@@ -45,7 +47,13 @@ export function useInterviewDebugData(sessionId?: string) {
           .select("*")
           .eq("session_id", sessionId!)
           .order("created_at", { ascending: true }),
+        supabase
+          .from("voice_interview_events")
+          .select("event_type, payload, created_at")
+          .eq("session_id", sessionId!)
+          .order("created_at", { ascending: true }),
       ]);
+
 
       let job: any = null;
       let candidate: any = null;
@@ -121,8 +129,79 @@ export function useInterviewDebugData(sessionId?: string) {
           label: `Anomalia: ${a.rule_code}`,
           detail: a.description,
           payload: a.metrics,
+          severity: a.severity,
         });
       });
+
+      // Eventos do orquestrador: inclui conductor_next_turn e marca regressões
+      // de questionIndex (next_turn voltou para uma pergunta anterior).
+      let lastConductorQi = -1;
+      let lastConductorPhase = "";
+      (voiceEvents ?? []).forEach((e: any) => {
+        const p = (e.payload ?? {}) as Record<string, any>;
+        const eventType = String(e.event_type);
+        const interesting =
+          eventType === "conductor_next_turn" ||
+          eventType === "conductor_regression_detected_client" ||
+          eventType === "culture_premature_end_blocked" ||
+          eventType === "audio_upload_failed" ||
+          eventType === "audio_upload_pagehide_attempt" ||
+          eventType === "response_save_dead_letter" ||
+          eventType === "abnormal_disconnect";
+        if (!interesting) return;
+
+        let severity: "info" | "warning" | "critical" = "info";
+        let label = eventType;
+        let detail: string | undefined;
+
+        if (eventType === "conductor_next_turn") {
+          const qi = Number(p.questionIndex ?? -1);
+          const phase = String(p.phase ?? "");
+          const isFollowup = Boolean(p.isFollowup);
+          label = `Conductor: ${p.action ?? "?"} · ${phase} · Q${qi + 1}${isFollowup ? " (follow-up)" : ""}`;
+          if (
+            !isFollowup &&
+            lastConductorQi >= 0 &&
+            qi < lastConductorQi &&
+            phase !== "closing" &&
+            lastConductorPhase !== "closing"
+          ) {
+            severity = "critical";
+            detail = `Regressão: voltou de Q${lastConductorQi + 1} para Q${qi + 1}`;
+          }
+          lastConductorQi = qi;
+          lastConductorPhase = phase;
+        } else if (eventType === "conductor_regression_detected_client") {
+          severity = "critical";
+          label = "Regressão de pergunta detectada (cliente forçou fim)";
+          detail = `de Q${(p.previousMax ?? 0) + 1} para Q${(p.received ?? 0) + 1}`;
+        } else if (eventType === "culture_premature_end_blocked") {
+          severity = "warning";
+          label = "Encerramento precoce bloqueado";
+        } else if (eventType === "audio_upload_failed") {
+          severity = "critical";
+          label = "Upload de áudio falhou";
+        } else if (eventType === "audio_upload_pagehide_attempt") {
+          severity = "warning";
+          label = "Upload de áudio via pagehide (best-effort)";
+        } else if (eventType === "abnormal_disconnect") {
+          severity = "warning";
+          label = "Desconexão anormal";
+        } else if (eventType === "response_save_dead_letter") {
+          severity = "critical";
+          label = "Resposta caiu em dead-letter";
+        }
+
+        timeline.push({
+          ts: e.created_at,
+          kind: "event",
+          label,
+          detail,
+          payload: p,
+          severity,
+        });
+      });
+
       if (session.completed_at) {
         timeline.push({
           ts: session.completed_at,

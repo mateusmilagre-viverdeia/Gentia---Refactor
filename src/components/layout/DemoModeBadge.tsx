@@ -26,7 +26,7 @@ export function DemoModeBadge() {
           </span>
         </div>
         <Link
-          to="/atracao-contratacao/recrutamento/configuracoes?tab=demo"
+          to="/atracao-contratacao/recrutamento/configuracoes?tab=creditos"
           className="underline underline-offset-2 hover:opacity-80"
         >
           Limpar dados demo

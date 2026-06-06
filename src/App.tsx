@@ -485,7 +485,7 @@ const App = () => (
                 <Route path="/atracao-contratacao/recrutamento/outreach" element={<Navigate to="/atracao-contratacao/recrutamento/hunting-outreach?tab=outreach" replace />} />
                 <Route path="/atracao-contratacao/recrutamento/creditos" element={<Navigate to="/atracao-contratacao/recrutamento/configuracoes?tab=creditos" replace />} />
                 <Route path="/atracao-contratacao/recrutamento/agents" element={<Navigate to="/atracao-contratacao/recrutamento/configuracoes?tab=agentes" replace />} />
-                <Route path="/atracao-contratacao/recrutamento/logs" element={<Navigate to="/atracao-contratacao/recrutamento/configuracoes?tab=logs" replace />} />
+                <Route path="/atracao-contratacao/recrutamento/logs" element={<Navigate to="/atracao-contratacao/recrutamento/configuracoes?tab=creditos" replace />} />
                 <Route path="/careers/:orgSlug" element={<CareersPage />} />
                 {/* Public mini-site (Gent.IA marketing) — at root level */}
                 <Route element={<PublicSiteLayout />}>

@@ -83,6 +83,11 @@ export type VoiceInterviewEventType =
   | "conductor_speculative_hit"
   | "conductor_speculative_miss"
   | "conductor_label_expanded"
+  | "conductor_next_turn"
+  | "conductor_regression_detected_client"
+  | "speculative_skipped_short_burst"
+  | "audio_upload_pagehide_attempt"
+
   // Audio upload lifecycle
   | "audio_upload_started"
   | "audio_upload_succeeded"

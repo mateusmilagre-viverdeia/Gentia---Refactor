@@ -1,16 +1,17 @@
 import { cn } from "@/lib/utils";
-import { Sparkles, Brain, Code, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Sparkles, Brain, Code, CheckCircle2, XCircle, Loader2, Shield } from "lucide-react";
 
 export type StepStatus = "completed" | "active" | "locked" | "rejected" | "evaluating";
 
 export interface StepperStep {
   id: string;
-  type: "cultural" | "disc" | "technical" | "completed";
+  type: "screening" | "cultural" | "disc" | "technical" | "completed";
   label: string;
   status: StepStatus;
 }
 
 const STEP_ICONS: Record<string, React.ElementType> = {
+  screening: Shield,
   cultural: Sparkles,
   disc: Brain,
   technical: Code,
@@ -18,11 +19,13 @@ const STEP_ICONS: Record<string, React.ElementType> = {
 };
 
 const STEP_LABELS: Record<string, string> = {
+  screening: "Triagem",
   cultural: "Fit Cultural",
   disc: "Fit Comportamental",
   technical: "Fit Técnico",
   completed: "Concluído",
 };
+
 
 export function buildStepperSteps(
   workflowSteps: Array<{ step_type: string; position?: number }>,
@@ -34,7 +37,8 @@ export function buildStepperSteps(
   // a ordem relativa entre cultural/disc/technical é preservada conforme position.
   const ordered = [...workflowSteps]
     .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
-    .filter((s) => ["cultural", "disc", "technical"].includes(s.step_type));
+    .filter((s) => ["screening", "cultural", "disc", "technical"].includes(s.step_type));
+
 
   let foundActive = false;
   const steps: StepperStep[] = ordered.map((s) => {

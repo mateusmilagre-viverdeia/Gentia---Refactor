@@ -7,7 +7,7 @@ const tiers = [
   {
     name: "Essencial",
     eyebrow: "Para começar",
-    price: "A partir de R$ 297/mês",
+    price: "Sob consulta",
     priceNote: "sem fidelidade",
     desc: "Para empresas com até 10 vagas/mês.",
     feats: [
@@ -51,7 +51,7 @@ export default function PrecosPage() {
         <title>Preços — Gent.IA</title>
         <meta
           name="description"
-          content="Três planos para o Gentia de Recrutamento & Seleção: assinatura a partir de R$ 297/mês, pay-per-use e sob consulta."
+          content="Três planos para o Gentia de Recrutamento & Seleção: assinatura, pay-per-use e sob consulta."
         />
         <link rel="canonical" href="https://gentia.tech/precos" />
       </Helmet>

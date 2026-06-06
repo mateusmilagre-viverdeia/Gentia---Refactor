@@ -51,7 +51,7 @@ export default function PublicSiteLayout({ children }: { children?: ReactNode })
               </Link>
             ))}
           </nav>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <a
               href={WHATSAPP_URL}
               {...EXTERNAL_LINK_PROPS}
@@ -59,6 +59,12 @@ export default function PublicSiteLayout({ children }: { children?: ReactNode })
             >
               WhatsApp
             </a>
+            <Link
+              to="/login"
+              className="inline-flex text-[13px] text-[var(--lp-muted)] hover:text-[var(--lp-fg)] transition"
+            >
+              Login
+            </Link>
             <a
               href={CTA_URL}
               {...EXTERNAL_LINK_PROPS}
