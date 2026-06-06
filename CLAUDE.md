@@ -234,7 +234,8 @@ supabase db diff
 5. **Segurança primeiro**: ao tocar edge functions, validar JWT/uso de `service_role`; ao tocar tabelas, validar RLS.
 6. **Documentar**: decisões relevantes da auditoria/migração entram aqui ou em `docs/`.
 7. **Escopo grande**: 284 functions + 477 migrations — preferir mapeamento/auditoria em lote (agentes/varreduras) antes de editar caso a caso.
+8. **📋 Checklist de entrega (REGRA FIXA)**: o contrato (Fase 1) e seus entregáveis estão rastreados em **`docs/ENTREGA_CHECKLIST.md`** — fonte da verdade do aceite. **Sempre consultar antes de planejar** e **atualizar o status do(s) item(ns) correspondente(s) ao concluir qualquer trabalho** (frentes a–f, entregáveis g, critérios h). Não fazer nada da lista §i (fora do escopo) sem proposta apartada. Cada frente concluída → marcar `[x]` + evidência (arquivo/migration/commit).
 
 ---
 
-*Última atualização: 2026-06-03 — Frentes A (Segurança), C (Banco/Performance) e B (Observabilidade) concluídas. A: RLS 100%, PII (portal/employees_public/candidate-files) fechada, isolamento provado, advisor 2 ERROR→0, runbook. C: RLS InitPlan (1090 policies), 206 índices FK, 46 redundâncias, advisor 2664→1476, relatório + escala. B: métricas de IA (views+RPC), ops-health-monitor + ops_alerts (e2e), log estruturado, OBSERVABILITY.md. Próximo: Frente E (Infra/Escala) → F (LLMs) → D (Backup/DR).*
+*Última atualização: 2026-06-06 — Criado o checklist-mestre de entrega `docs/ENTREGA_CHECKLIST.md` (regra §10.8) mapeando todo o contrato. Status: Frentes A (Segurança) ✅, B (Observabilidade) ✅, C (Banco/Performance) 🟡 núcleo feito. Pendentes: D (Backup), E (Infra/Escala), F (LLMs). Secrets do cliente validados e 14 salvos no destino (`docs/SECRETS_INVENTORY.md`). Sync do Lovable (07647c9) integrado (front+back). Próximo foco: **Frente F — IA/custos/Claude**.*
