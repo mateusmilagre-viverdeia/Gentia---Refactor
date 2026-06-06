@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  User, 
+import { SignedCvLink } from "./SignedCvLink";
+import {
+  User,
   MapPin, 
   Briefcase, 
   Lock, 
@@ -184,18 +185,11 @@ export function MarketplaceCandidateCard({
                 <ExternalLink className="h-3 w-3" />
               </a>
             )}
-            {revealedData.cv_url && (
-              <a 
-                href={revealedData.cv_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-primary hover:underline"
-              >
-                <FileText className="h-4 w-4" />
-                Ver Currículo
-                <ExternalLink className="h-3 w-3" />
-              </a>
-            )}
+            <SignedCvLink cvUrl={revealedData.cv_url} className="flex items-center gap-2 text-sm text-primary hover:underline">
+              <FileText className="h-4 w-4" />
+              Ver Currículo
+              <ExternalLink className="h-3 w-3" />
+            </SignedCvLink>
             {revealedData.source_sector && (
               <p className="text-xs text-muted-foreground mt-2">
                 Setor anterior: {revealedData.source_sector}

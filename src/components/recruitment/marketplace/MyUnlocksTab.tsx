@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { SignedCvLink } from "./SignedCvLink";
 import {
   Select,
   SelectContent,
@@ -177,16 +178,9 @@ export function MyUnlocksTab() {
                         <Linkedin className="h-4 w-4" />
                       </a>
                     )}
-                    {unlock.revealed_data.cv_url && (
-                      <a
-                        href={unlock.revealed_data.cv_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-muted-foreground hover:text-primary"
-                      >
-                        <FileText className="h-4 w-4" />
-                      </a>
-                    )}
+                    <SignedCvLink cvUrl={unlock.revealed_data.cv_url} className="text-muted-foreground hover:text-primary">
+                      <FileText className="h-4 w-4" />
+                    </SignedCvLink>
                   </div>
                 </TableCell>
                 <TableCell>
