@@ -11,7 +11,7 @@ export interface AnthropicToolCall {
 export interface AnthropicResult {
   toolCalls: AnthropicToolCall[];
   text: string;
-  usage: { prompt_tokens: number; completion_tokens: number };
+  usage: { prompt_tokens: number; completion_tokens: number; cached_tokens?: number };
   model: string;
   raw: any;
 }
@@ -36,9 +36,13 @@ export async function callClaudeWithTool(opts: {
     model: opts.model,
     max_tokens: opts.maxTokens ?? 4096,
     temperature: opts.temperature ?? 0.3,
-    system: opts.systemPrompt,
+    // Prompt caching: marca tools + system (parte estática/grande) como cacheável →
+    // input cacheado fica ~90% mais barato em chamadas repetidas (ex.: pareceres com
+    // o mesmo schema/prompt). No-op se o prefixo for < ~1k tokens (sem custo extra).
+    // GA (não precisa de beta header). LLM_AUDIT §8.
+    system: [{ type: "text", text: opts.systemPrompt, cache_control: { type: "ephemeral" } }],
     messages: [{ role: "user", content: opts.userMessage }],
-    tools: [opts.tool],
+    tools: [{ ...opts.tool, cache_control: { type: "ephemeral" } }],
     tool_choice: { type: "tool", name: opts.tool.name },
   };
 
@@ -74,6 +78,7 @@ export async function callClaudeWithTool(opts: {
     usage: {
       prompt_tokens: data.usage?.input_tokens ?? 0,
       completion_tokens: data.usage?.output_tokens ?? 0,
+      cached_tokens: data.usage?.cache_read_input_tokens ?? 0,
     },
     model: data.model || opts.model,
     raw: data,

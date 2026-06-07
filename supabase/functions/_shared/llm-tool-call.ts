@@ -186,6 +186,7 @@ async function callAnthropic<T>(
       prompt_tokens: r.usage.prompt_tokens,
       completion_tokens: r.usage.completion_tokens,
       total_tokens: (r.usage.prompt_tokens ?? 0) + (r.usage.completion_tokens ?? 0),
+      cached_tokens: r.usage.cached_tokens ?? 0,
     },
     raw: r.raw,
   };
