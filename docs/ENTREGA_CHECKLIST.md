@@ -47,7 +47,7 @@
 
 ## c) Banco de Dados — 🟡 NÚCLEO FEITO
 - [x] Análise da estrutura atual → `docs/PERFORMANCE_AUDIT.md`
-- [🟡] Queries lentas + índices de performance → 206 índices FK + RLS InitPlan (1090); **queries lentas reais dependem de `pg_stat_statements`/tráfego → cutover**
+- [🟡] Queries lentas + índices de performance → 206 índices FK + RLS InitPlan (1090) + **consolidação de policies (piloto `recruitment_candidates`, isolamento re-testado; `multiple_permissive_policies` 842→840)**; restante das tabelas quentes + queries lentas reais (`pg_stat_statements`) → cutover
 - [x] Revisão de relacionamentos e integridade referencial → análise de FKs + 206 índices + drift FKs
 - [x] **Documentação técnica completa do banco** → `docs/BANCO_DADOS.md`
 - [x] **Mapeamento das tabelas críticas** → `BANCO_DADOS.md §3` (empresas, usuários/permissões, candidatos, vagas/candidaturas, entrevistas, avaliações/scores, créditos, IA, logs, pulse)
