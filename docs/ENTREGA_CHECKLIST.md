@@ -18,7 +18,7 @@
 | c) Banco de Dados | 🟡 `BANCO_DADOS.md` (doc técnica + mapa de tabelas críticas); queries lentas reais no cutover | ~90% |
 | d) Backup e Recuperação | 🟡 `BACKUP_DR.md`: 7 backups/dia + WAL-G; RPO/RTO + DR + restore doc; PITR (decisão custo) e teste real no cutover | ~70% |
 | e) Infraestrutura e Escalabilidade | 🟡 `INFRA_ESCALA.md`: pooling + cache (impl.) + review + fallback; compute/slow-query no cutover | ~70% |
-| f) Otimização de LLMs | 🟢 `LLM_AUDIT` + `PLANO_EFICIENCIA` + comparativo de custo; **wrapper de desacoplamento implementado atrás de flag** + Claude provado + parecer blindado; ativação/R$ no cutover | ~75% |
+| f) Otimização de LLMs | 🟢 `LLM_AUDIT` + `PLANO_EFICIENCIA` + custo; desacoplamento (flag) + **fallback** + **prompt caching (Claude, validado)** + parecer blindado; ativação direta/R$ no cutover | ~85% |
 | g) Entregáveis (artefatos) | ✅ 11/12 (relatório, banco, RLS, isolamento, functions, dashboards, backup, runbook, LLM, guia, handoff); falta só a **reunião** | ~90% |
 
 ---
@@ -40,7 +40,7 @@
 - [x] Monitoramento de erros e exceções → `ops-health-monitor` + `v_ops_ai_errors_recent`
 - [x] Alertas para falhas e comportamentos anômalos → `ops-health-monitor` + `ops_alerts` + Discord (validado e2e)
 - [x] Eventos críticos que geram alerta (custo IA, erro de função, etc.) → definidos em `OBSERVABILITY.md`
-- [🟡] Dashboards (banco, Edge Functions, custo LLM) → views `v_ops_ai_*` + RPC `ops_ai_metrics`; dashboards de banco/edge via Reports nativo do Supabase
+- [x] Dashboards (banco, Edge Functions, custo LLM) → **custo LLM**: views `v_ops_ai_*` + RPC `ops_ai_metrics`; **banco**: RPC `ops_db_metrics` (conexões/size/cache/tabelas/slow queries); **edge**: `v_ops_ai_by_function` + Reports nativo
 - [🟡] Visibilidade em tempo real → `ops_alerts`/views + dashboard nativo
 - [⏳] Canais de alerta + responsáveis → Discord no código + responsáveis no runbook; **webhook real + agendar cron no cutover**
 - [x] Documentação (onde ver logs/dashboards/erros/alertas/métricas) → `docs/OBSERVABILITY.md`
@@ -74,13 +74,13 @@
 ## f) Otimização de LLMs (Custo-Benefício) — 🟡 análise/plano feitos · `docs/LLM_AUDIT.md`
 - [x] Análise do uso atual de LLMs → `LLM_AUDIT.md §1-2` (inventário feature×modelo×tokens, real)
 - [x] Avaliação de modelos/provedores (custo × desempenho) → §4-5 (preços oficiais Claude + recomendação)
-- [🟡] Otimização de prompts e consumo de tokens → §8 (caching/right-sizing documentados; aplicar na impl.)
-- [🟡] Cache de respostas + fallback entre modelos → §7-8 (desenhado; implementar com a reescrita)
+- [x] Otimização de prompts e consumo de tokens → §8 + **prompt caching do Claude implementado** (cache_control system+tools; validado: leu 8.640 tok do cache)
+- [x] Cache de respostas + fallback entre modelos → **implementados** no wrapper (caching §8 + cadeia de fallback §7)
 - [🟡] Projeção de custo por escala → §5.1 (tabela A–E com premissas; escala linear; números finais no cutover c/ volume real)
 - [x] Mapeamento das chamadas LLM por fluxo → §2 (`feature_llm_mapping` + `v_ops_ai_by_function`)
 - [x] Recomendação de modelo/provedor por tipo de tarefa (incl. **Claude**) → §5
 - [🟡] Comparativo custo atual × projetado → §5.1 (tabela Gemini×direto×Claude em R$/mês e R$/ano; premissas documentadas; travar volume/markup no cutover)
-- [🟡] Fallback p/ falhas de LLM → §7 (cadeias por feature desenhadas; implementar)
+- [x] Fallback p/ falhas de LLM → §7 + **implementado** no wrapper (`callLLMTool` aceita `fallbackModels[]`: primário→cadeia; commit `24fc9cb`)
 - [🟡] **Desacoplar Lovable Gateway → provedores diretos** → §6 **IMPLEMENTADO atrás de flag** (`LLM_DIRECT_PROVIDERS`, default OFF; commit `302f927`; 4 functions, bundle validado). Ativar no cutover: popular `GEMINI_API_KEY` + ligar flag.
 
 ## g) Entregáveis (artefatos para aceite)
@@ -89,7 +89,7 @@
 - [x] Lista de tabelas revisadas e RLS ajustadas → `SECURITY_AUDIT.md`
 - [x] Evidência de teste de isolamento multi-tenant → `SECURITY_AUDIT.md §9`
 - [x] Lista de Edge Functions revisadas/corrigidas/otimizadas → `INFRA_ESCALA.md §3` (segurança + cache + IA)
-- [🟡] Dashboards de observabilidade configurados → `OBSERVABILITY.md` + views/RPC
+- [x] Dashboards de observabilidade configurados → `OBSERVABILITY.md` + RPCs `ops_ai_metrics` (IA/custo) e `ops_db_metrics` (banco) + Reports nativo
 - [x] Plano de backup e recuperação → `docs/BACKUP_DR.md`
 - [x] Runbook básico de resposta a incidentes → `RUNBOOK_INCIDENTES.md`
 - [x] Análise comparativa de LLMs com recomendação → `docs/LLM_AUDIT.md`
@@ -98,7 +98,7 @@
 - [⬜] Reunião de handoff ao término → **com o cliente** (pauta em `HANDOFF.md §7`)
 
 ## h) Critérios de Aceite (libera 2ª parcela) — espelho dos itens acima
-✅ Relatório antes/depois · ✅ Banco documentado · 🟡 Queries críticas otimizadas · ✅ RLS revisado nas críticas · ✅ Isolamento testado e documentado · 🟡 Secrets/variáveis revisados · ✅ Edge Functions críticas revisadas · ✅ Logs e alertas configurados · 🟡 Dashboards mínimos ativos · ✅ Mapeamento de chamadas LLM · ✅ Recomendações de modelos documentadas · ✅ Plano de backup entregue · ⬜ Reunião de handoff.
+✅ Relatório antes/depois · ✅ Banco documentado · 🟡 Queries críticas otimizadas · ✅ RLS revisado nas críticas · ✅ Isolamento testado e documentado · 🟡 Secrets/variáveis revisados · ✅ Edge Functions críticas revisadas · ✅ Logs e alertas configurados · ✅ Dashboards mínimos ativos · ✅ Mapeamento de chamadas LLM · ✅ Recomendações de modelos documentadas · ✅ Plano de backup entregue · ⬜ Reunião de handoff.
 
 ## i) FORA do escopo (não fazer — proposta apartada)
 Novas funcionalidades · suporte pós-garantia · redesign UX/UI · novos módulos · **refatoração completa do front** · **migração completa p/ outra cloud/banco** · fine-tuning de IA próprio · agente de IA do zero · **pentest formal certificado** · **auditoria jurídica de LGPD** · suporte 24/7 · correção de bugs fora das frentes.
