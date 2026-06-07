@@ -37,6 +37,8 @@ export interface CallLLMToolParams {
   apiKey?: string;
   /** Optional stable identifier used as OpenAI `prompt_cache_key` (no-op no Gemini). */
   cacheKey?: string;
+  /** Modelos de fallback, tentados em ordem se o primário falhar (LLM_AUDIT §7). */
+  fallbackModels?: string[];
 }
 
 export interface CallLLMToolResult<T = Record<string, unknown>> {
@@ -189,11 +191,8 @@ async function callAnthropic<T>(
   };
 }
 
-// --- API pública (interface inalterada) -------------------------------------
-export async function callLLMTool<T = Record<string, unknown>>(
-  params: CallLLMToolParams,
-): Promise<CallLLMToolResult<T>> {
-  const model = params.model;
+// --- Roteamento de UMA tentativa (provedor do `model`) ----------------------
+function routeOnce<T>(model: string, params: CallLLMToolParams): Promise<CallLLMToolResult<T>> {
   const m = model.toLowerCase();
 
   // Gateway = comportamento padrão (idêntico ao anterior) e também quando o
@@ -222,4 +221,30 @@ export async function callLLMTool<T = Record<string, unknown>>(
   }
   // perplexity/* e desconhecidos -> gateway (por enquanto)
   return gateway();
+}
+
+// --- API pública: primário + CADEIA DE FALLBACK por modelo (LLM_AUDIT §7) ----
+// Tenta `params.model`; se falhar, tenta `params.fallbackModels` em ordem (ex.:
+// modelo "pro" instável -> flash -> claude). Sem fallbackModels = 1 tentativa
+// (comportamento idêntico ao anterior). Cada modelo já tem seus próprios retries
+// de transiente (429/5xx) dentro de routeOnce.
+export async function callLLMTool<T = Record<string, unknown>>(
+  params: CallLLMToolParams,
+): Promise<CallLLMToolResult<T>> {
+  const chain = [params.model, ...(params.fallbackModels ?? [])].filter(Boolean);
+  let lastError: unknown = null;
+  for (let i = 0; i < chain.length; i++) {
+    try {
+      return await routeOnce<T>(chain[i], params);
+    } catch (e) {
+      lastError = e;
+      if (i < chain.length - 1) {
+        console.warn(
+          `[llm-tool-call] modelo "${chain[i]}" falhou (${String((e as Error)?.message).slice(0, 120)}); ` +
+            `tentando fallback "${chain[i + 1]}"`,
+        );
+      }
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("LLM tool call failed");
 }
