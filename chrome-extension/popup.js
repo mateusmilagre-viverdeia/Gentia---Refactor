@@ -1,7 +1,7 @@
 // Popup script — autenticação + seleção de conta + captura
 const GENTIA_URL = "https://gentia.tech";
-const SUPABASE_URL = "https://axumduklmiiptumdsgtu.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4dW1kdWtsbWlpcHR1bWRzZ3R1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI5MDgyNzIsImV4cCI6MjA3ODQ4NDI3Mn0.o1xpZtdm8X-HfI3N-4CdpltIgZPyqerYtfGeTpytxSg";
+const SUPABASE_URL = "https://tdyvuomybimgygjgvnrk.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkeXZ1b215YmltZ3lnamd2bnJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNTQwMDksImV4cCI6MjA5NTkzMDAwOX0.5TkRRgBXweXTIHapMy1f-9kSSzBeQu-s8NqxwTzsM6Q";
 
 const STORAGE_KEY = "gentia_session_v3";
 const root = document.getElementById("content");
