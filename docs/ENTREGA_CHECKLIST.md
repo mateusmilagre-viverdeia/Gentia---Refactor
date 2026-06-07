@@ -18,8 +18,8 @@
 | c) Banco de Dados | 🟡 `BANCO_DADOS.md` (doc técnica + mapa de tabelas críticas); queries lentas reais no cutover | ~90% |
 | d) Backup e Recuperação | 🟡 `BACKUP_DR.md`: 7 backups/dia + WAL-G; RPO/RTO + DR + restore doc; PITR (decisão custo) e teste real no cutover | ~70% |
 | e) Infraestrutura e Escalabilidade | 🟡 `INFRA_ESCALA.md`: pooling + cache (impl.) + review + fallback; compute/slow-query no cutover | ~70% |
-| f) Otimização de LLMs | 🟡 Inventário + recomendação + plano (`LLM_AUDIT.md`); impl. e R$/mês no cutover | ~60% |
-| g) Entregáveis (artefatos) | 🟡 Em progresso | ~60% |
+| f) Otimização de LLMs | 🟢 `LLM_AUDIT` + `PLANO_EFICIENCIA` + comparativo de custo; **wrapper de desacoplamento implementado atrás de flag** + Claude provado + parecer blindado; ativação/R$ no cutover | ~75% |
+| g) Entregáveis (artefatos) | ✅ 11/12 (relatório, banco, RLS, isolamento, functions, dashboards, backup, runbook, LLM, guia, handoff); falta só a **reunião** | ~90% |
 
 ---
 
