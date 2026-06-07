@@ -29,7 +29,7 @@
 ## Fase 1 — Freeze + dados reais finais
 1. **Tirar o sistema antigo do ar** (Lovable) — início do downtime (evita novos dados perdidos).
 2. **Exportar** os dados de produção do Lovable (snapshot final) e **importar no destino**. *(O cliente já validou uma carga de teste nesta fase 1 — repetir com o snapshot final.)*
-3. **Storage**: migrar buckets (CVs/avatares/etc.) origem→destino.
+3. **Storage**: migrar buckets (CVs/avatares/etc.) origem→destino. **⚠️ Após importar, RE-CHECAR a PRIVACIDADE dos buckets** — a importação pode resetar `public` (achado real: deixou `candidate-files` público; corrigido em `20260606170000`). Devem ser **privados**: `candidate-files`, `external-resumes`, `project-documents`, `technical-interview-audio`, `culture-interview-audio`, `offline-interviews` → `update storage.buckets set public=false where id in (...);`.
 4. **Auth**: migrar usuários (`auth.users`) se ainda não vierem no export.
 **Gate 1:** contagens batem com produção:
 ```sh

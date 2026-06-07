@@ -291,3 +291,9 @@ project_id = "tdyvuomybimgygjgvnrk"
     verify_jwt = false
   [functions.mark-interview-failed]
     verify_jwt = false
+  [functions.sitemap]
+    verify_jwt = false
+  [functions.careers-public-data]
+    verify_jwt = false
+  [functions.careers-apply]
+    verify_jwt = false
