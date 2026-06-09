@@ -100,7 +100,13 @@ async function callOpenAICompatible<T>(
         },
       },
     ],
-    tool_choice: { type: "function", function: { name: params.tool.name } },
+    // Google (OpenAI-compat) REJEITA tool_choice forçado-por-nome (retorna
+    // MALFORMED_FUNCTION_CALL). Com "auto" + 1 tool + instrução, ele chama a tool
+    // corretamente (validado). Gateway/OpenAI: mantêm o forçado. Fallback de parse
+    // de JSON no content cobre o caso raro de "auto" não chamar.
+    tool_choice: endpoint === GOOGLE_OPENAI_URL
+      ? "auto"
+      : { type: "function", function: { name: params.tool.name } },
   };
   if (params.cacheKey) body.prompt_cache_key = params.cacheKey;
 
