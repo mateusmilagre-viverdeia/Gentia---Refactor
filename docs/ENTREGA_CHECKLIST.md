@@ -81,7 +81,7 @@
 - [x] Recomendação de modelo/provedor por tipo de tarefa (incl. **Claude**) → §5
 - [🟡] Comparativo custo atual × projetado → §5.1 (tabela Gemini×direto×Claude em R$/mês e R$/ano; premissas documentadas; travar volume/markup no cutover)
 - [x] Fallback p/ falhas de LLM → §7 + **implementado** no wrapper (`callLLMTool` aceita `fallbackModels[]`: primário→cadeia; commit `24fc9cb`)
-- [🟡] **Desacoplar Lovable Gateway → provedores diretos** → §6 **IMPLEMENTADO atrás de flag** (`LLM_DIRECT_PROVIDERS`, default OFF; commit `302f927`; 4 functions, bundle validado). Ativar no cutover: popular `GEMINI_API_KEY` + ligar flag.
+- [🟡] **Desacoplar Lovable Gateway → provedores diretos** → §6: wrapper roteável + **flag `LLM_DIRECT_PROVIDERS` ATIVADA (2026-06-12, OK do dono)** — 4 functions (parecer cultura/técnica, match CV, reprocess) rodando **Gemini/Claude DIRETO** (validado com os modelos reais: gemini-3-flash-preview, gemini-2.5-flash, claude-haiku-4-5). ⏳ Restam ~77 functions com fetch INLINE ao gateway (`LOVABLE_API_KEY`, ausente no destino) → desacoplar (trabalho grande) ou bridge com a key do Lovable p/ o teste.
 
 ## g) Entregáveis (artefatos para aceite)
 - [x] Relatório de auditoria antes/depois → `SECURITY_AUDIT.md` + `PERFORMANCE_AUDIT.md`, consolidado em `HANDOFF.md §2`
