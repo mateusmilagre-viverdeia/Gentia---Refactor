@@ -59,12 +59,13 @@ interface Agent {
   interview_count?: number;
 }
 
+// Tipos REAIS dos agentes no banco (recruitment_agents.type). Os valores antigos
+// (culture/technical/behavioral/screening) não existem -> filtrar por eles listava vazio.
 const AGENT_TYPE_OPTIONS = [
   { value: "all", label: "Todos os tipos" },
-  { value: "culture", label: "Cultura" },
-  { value: "technical", label: "Técnico" },
-  { value: "behavioral", label: "Comportamental" },
-  { value: "screening", label: "Triagem" },
+  { value: "structured", label: "Estruturado" },
+  { value: "adaptive", label: "Adaptativo" },
+  { value: "disc", label: "DISC" },
 ];
 
 export function AgentsSettingsTab() {

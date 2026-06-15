@@ -400,7 +400,8 @@ async function createTechnicalSessionFromOffline(args: {
   if (!agentId) {
     const { data: agent } = await supabaseAdmin
       .from("recruitment_agents")
-      .select("id").eq("account_id", upload.account_id).eq("type", "technical").eq("is_active", true)
+      // Taxonomia atual: o agente técnico tem type 'adaptive' (não 'technical', que não existe no DB).
+      .select("id").eq("account_id", upload.account_id).in("type", ["adaptive", "technical"]).eq("is_active", true)
       .limit(1).maybeSingle();
     agentId = agent?.id || null;
   }

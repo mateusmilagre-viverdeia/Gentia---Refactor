@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { consumeAICredits } from "../_shared/ai-credit-consumption.ts";
+import { aiFetch } from "../_shared/ai-gateway.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -275,7 +276,7 @@ Regime: ${job.employment_type || "Não informado"}
 
 Gere APENAS a mensagem, sem prefixo ou explicação.`;
 
-  const res = await fetch(`${LOVABLE_API_URL}/ai`, {
+  const res = await aiFetch(`${LOVABLE_API_URL}/ai`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

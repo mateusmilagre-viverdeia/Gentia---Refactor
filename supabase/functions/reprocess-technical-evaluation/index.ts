@@ -32,7 +32,9 @@ serve(async (req) => {
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    // Desacoplado: a avaliação real roda por evaluateTechnicalV3 -> callLLMTool (direto).
+    // Guard antigo virou dead-code e quebrava no destino (LOVABLE_API_KEY removido).
+    const LOVABLE_API_KEY = "direct";
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not set");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;

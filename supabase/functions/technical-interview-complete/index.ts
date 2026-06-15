@@ -136,7 +136,11 @@ serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    // Desacoplado do Lovable Gateway: a avaliação real roda por evaluateTechnicalV3 ->
+    // callLLMTool, que com LOVABLE_API_KEY ausente força provedor DIRETO (Gemini/Claude).
+    // O guard antigo (throw se !LOVABLE_API_KEY) virou dead-code e QUEBRAVA a função no
+    // destino (secret removido) — espelha o padrão de culture-interview-complete.
+    const LOVABLE_API_KEY = "direct";
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
