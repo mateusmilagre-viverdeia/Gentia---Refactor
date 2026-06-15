@@ -62,8 +62,14 @@ class LLMToolError extends Error {
 }
 
 // --- Roteamento -------------------------------------------------------------
+// Direto = flag ON **ou** gateway indisponível. Como o Lovable Gateway foi REMOVIDO
+// no cutover (LOVABLE_API_KEY ausente), o fallback p/ gateway não existe mais → força
+// direto sempre, independente da flag. Se LOVABLE_API_KEY ainda existir (ambiente de
+// transição), respeita a flag (comportamento anterior).
 function directEnabled(): boolean {
-  return (Deno.env.get("LLM_DIRECT_PROVIDERS") ?? "").toLowerCase() === "true";
+  const flag = (Deno.env.get("LLM_DIRECT_PROVIDERS") ?? "").toLowerCase() === "true";
+  const gatewayGone = !Deno.env.get("LOVABLE_API_KEY");
+  return flag || gatewayGone;
 }
 /** key válida = existe e não é o placeholder "PENDING_..." (cutover). */
 function keyOk(v?: string | null): v is string {
@@ -109,6 +115,13 @@ async function callOpenAICompatible<T>(
       : { type: "function", function: { name: params.tool.name } },
   };
   if (params.cacheKey) body.prompt_cache_key = params.cacheKey;
+  // VELOCIDADE: Gemini Flash faz "thinking" por padrão (~3-4x mais lento; o gateway
+  // Lovable rodava SEM). reasoning_effort="none" restaura a velocidade. Modelos "pro"
+  // exigem thinking -> não mexe. (Mesmo fix do _shared/ai-gateway.ts, mas este caminho
+  // do wrapper faz fetch próprio e não passa pelo aiFetch.)
+  if (endpoint === GOOGLE_OPENAI_URL && !model.toLowerCase().includes("pro")) {
+    body.reasoning_effort = "none";
+  }
 
   let lastError: unknown = null;
   for (let attempt = 0; attempt <= retries; attempt++) {

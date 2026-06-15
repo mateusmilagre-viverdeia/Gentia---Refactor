@@ -46,9 +46,7 @@ Responda APENAS com JSON válido (sem markdown, sem comentários) com este schem
 Não invente dados. Use null/array vazio quando não houver informação.`;
 
 async function callLLM(content: { type: "text" | "file"; data: string; mimeType?: string }) {
-  const apiKey = "direct";
-  if (!apiKey) throw new Error("LOVABLE_API_KEY not set");
-
+  // Desacoplado do Lovable Gateway: aiFetch roteia pelo `model` (gemini-2.5-flash-lite -> Google direto).
   const userContent: any[] = content.type === "text"
     ? [{ type: "text", text: `Currículo (texto extraído):\n\n${content.data}` }]
     : [
@@ -56,9 +54,9 @@ async function callLLM(content: { type: "text" | "file"; data: string; mimeType?
         { type: "image_url", image_url: { url: `data:${content.mimeType};base64,${content.data}` } },
       ];
 
-  const res = await fetch(LOVABLE_AI_URL, {
+  const res = await aiFetch(LOVABLE_AI_URL, {
     method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       model: PARSE_MODEL,
       messages: [
