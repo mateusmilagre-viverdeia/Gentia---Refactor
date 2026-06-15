@@ -34,6 +34,17 @@ function envKey(name: string): string {
   return k;
 }
 
+// Retry em erros transientes (429 / 5xx — ex.: gemini-flash devolve 503 sob carga).
+// As functions inline não tinham retry próprio; centralizar aqui deixa todas resilientes.
+async function fetchWithRetry(url: string, init: RequestInit, retries = 2): Promise<Response> {
+  let res = await fetch(url, init);
+  for (let attempt = 0; attempt < retries && (res.status === 429 || res.status >= 500); attempt++) {
+    await new Promise((r) => setTimeout(r, 700 * (attempt + 1)));
+    res = await fetch(url, init);
+  }
+  return res;
+}
+
 export async function aiFetch(url: string, init: RequestInit): Promise<Response> {
   const payload = init?.body ? JSON.parse(init.body as string) : {};
   const provider = providerOf(payload.model);
@@ -43,7 +54,7 @@ export async function aiFetch(url: string, init: RequestInit): Promise<Response>
   if (isEmbeddings) {
     const model = stripPrefix(payload.model);
     if (provider === "openai") {
-      return fetch(`${OPENAI_BASE}/embeddings`, {
+      return fetchWithRetry(`${OPENAI_BASE}/embeddings`, {
         method: "POST",
         headers: { Authorization: `Bearer ${envKey("OPENAI_API_KEY")}`, "Content-Type": "application/json" },
         body: JSON.stringify({ ...payload, model }),
@@ -59,7 +70,7 @@ export async function aiFetch(url: string, init: RequestInit): Promise<Response>
     const key = envKey("GEMINI_API_KEY");
     const EMB_MODEL = "gemini-embedding-001";
     const inputs: string[] = Array.isArray(payload.input) ? payload.input : [payload.input];
-    const res = await fetch(
+    const res = await fetchWithRetry(
       `https://generativelanguage.googleapis.com/v1beta/models/${EMB_MODEL}:batchEmbedContents?key=${key}`,
       {
         method: "POST",
@@ -86,7 +97,7 @@ export async function aiFetch(url: string, init: RequestInit): Promise<Response>
   if (provider === "google" && body.tools && body.tool_choice && typeof body.tool_choice === "object") {
     body.tool_choice = "auto";
   }
-  return fetch(`${base}/chat/completions`, {
+  return fetchWithRetry(`${base}/chat/completions`, {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -117,7 +128,7 @@ async function anthropicAsOpenAI(payload: any): Promise<Response> {
     }
   }
 
-  const res = await fetch(ANTHROPIC_URL, {
+  const res = await fetchWithRetry(ANTHROPIC_URL, {
     method: "POST",
     headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
     body: JSON.stringify(body),
