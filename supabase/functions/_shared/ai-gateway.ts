@@ -93,9 +93,16 @@ export async function aiFetch(url: string, init: RequestInit): Promise<Response>
   const base = provider === "openai" ? OPENAI_BASE : GOOGLE_BASE;
   const key = provider === "openai" ? envKey("OPENAI_API_KEY") : envKey("GEMINI_API_KEY");
   const body: Record<string, unknown> = { ...payload, model: stripPrefix(payload.model) };
-  // Google (OpenAI-compat) rejeita tool_choice forçado-por-nome (MALFORMED_FUNCTION_CALL) -> "auto".
-  if (provider === "google" && body.tools && body.tool_choice && typeof body.tool_choice === "object") {
-    body.tool_choice = "auto";
+  if (provider === "google") {
+    // tool_choice forçado-por-nome -> MALFORMED_FUNCTION_CALL; usa "auto".
+    if (body.tools && body.tool_choice && typeof body.tool_choice === "object") body.tool_choice = "auto";
+    // VELOCIDADE: Gemini Flash faz "thinking" por padrão (~3x mais lento, gasta tokens).
+    // O gateway Lovable já rodava SEM thinking -> reasoning_effort="none" restaura a
+    // velocidade original. (Modelos "pro" exigem thinking -> não mexe; respeita o
+    // reasoning_effort que o chamador eventualmente já tenha definido.)
+    if (!("reasoning_effort" in body) && !String(body.model).toLowerCase().includes("pro")) {
+      body.reasoning_effort = "none";
+    }
   }
   return fetchWithRetry(`${base}/chat/completions`, {
     method: "POST",
