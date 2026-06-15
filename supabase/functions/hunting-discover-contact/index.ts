@@ -3,6 +3,7 @@
 // Cada provedor pago respeita toggles em hunting_provider_settings + circuit breaker diário.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { consumeAICredits } from '../_shared/ai-credit-consumption.ts';
 
 const corsHeaders = {
@@ -345,10 +346,10 @@ Deno.serve(async (req) => {
 
     // ============ ETAPA 4: IA EXTRACT do conteúdo coletado ============
     if ((!result.email || !result.phone) && scrapedTexts.length > 0) {
-      const lovableKey = Deno.env.get('LOVABLE_API_KEY');
+      const lovableKey = "direct";
       if (lovableKey) {
         try {
-          const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          const aiRes = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
             method: 'POST',
             headers: { Authorization: `Bearer ${lovableKey}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({

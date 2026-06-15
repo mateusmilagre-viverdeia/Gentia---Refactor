@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { consumeAICredits } from '../_shared/ai-credit-consumption.ts';
 
 const corsHeaders = {
@@ -25,7 +26,7 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    const lovableApiKey = "direct";
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Find approaches sent 48+ hours ago with no response
@@ -91,7 +92,7 @@ Deno.serve(async (req) => {
       if (!lovableApiKey) continue;
 
       try {
-        const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        const aiResponse = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${lovableApiKey}`,

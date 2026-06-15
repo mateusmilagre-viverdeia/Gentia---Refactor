@@ -3,6 +3,7 @@
 // para que possam ser limpos depois pelo Modo Demo padrão.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { sendWhatsAppViaZApi, isZApiConfigured } from "../_shared/whatsapp-zapi.ts";
 
 const corsHeaders = {
@@ -337,7 +338,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+      const lovableApiKey = "direct";
       const firstName = firstNameRaw || fullName.split(" ")[0];
       let whatsappMsg = `Ola ${firstName}! Vi seu perfil no LinkedIn e fiquei impressionado com sua trajetoria${company ? ` na ${company}` : ""}. Estamos com uma oportunidade de ${demoJob.title.replace(" (DEMO)", "")} que tem muito a ver com seu perfil. Topa um papo de 15min essa semana?`;
       let emailSubject = `Oportunidade ${demoJob.title.replace(" (DEMO)", "")} - quer conversar?`;
@@ -345,7 +346,7 @@ Deno.serve(async (req) => {
 
       if (lovableApiKey) {
         try {
-          const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          const aiRes = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
             headers: { Authorization: `Bearer ${lovableApiKey}`, "Content-Type": "application/json" },
             body: JSON.stringify({

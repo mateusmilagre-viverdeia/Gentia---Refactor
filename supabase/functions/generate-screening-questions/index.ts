@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { consumeAICredits } from "../_shared/ai-credit-consumption.ts";
 
@@ -50,7 +51,7 @@ serve(async (req) => {
       accountId,
     } = await req.json();
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const LOVABLE_API_KEY = "direct";
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ error: "AI not configured" }), {
         status: 500,
@@ -107,7 +108,7 @@ Retorne as perguntas usando a função fornecida.`;
 
     const userPrompt = contextParts.join("\n\n---\n\n");
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiResponse = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,

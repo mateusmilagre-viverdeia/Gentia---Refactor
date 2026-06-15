@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { consumeAICredits } from '../_shared/ai-credit-consumption.ts';
 
 const corsHeaders = {
@@ -17,7 +18,7 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const lovableKey = Deno.env.get('LOVABLE_API_KEY');
+    const lovableKey = "direct";
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -82,7 +83,7 @@ ${JSON.stringify(rejections, null, 2)}
 
 Identifique padrões e sugira ajustes concretos no ICP.`;
 
-    const aiResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const aiResp = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: { Authorization: `Bearer ${lovableKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({

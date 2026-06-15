@@ -41,13 +41,38 @@ export async function aiFetch(url: string, init: RequestInit): Promise<Response>
 
   // ---------- EMBEDDINGS ----------
   if (isEmbeddings) {
-    const base = provider === "openai" ? OPENAI_BASE : GOOGLE_BASE;
-    const key = provider === "openai" ? envKey("OPENAI_API_KEY") : envKey("GEMINI_API_KEY");
-    return fetch(`${base}/embeddings`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ ...payload, model: stripPrefix(payload.model) }),
-    });
+    const model = stripPrefix(payload.model);
+    if (provider === "openai") {
+      return fetch(`${OPENAI_BASE}/embeddings`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${envKey("OPENAI_API_KEY")}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ ...payload, model }),
+      });
+    }
+    // Google embeddings (API nativa). ⚠️ text-embedding-004/embedding-001 foram
+    // DESCONTINUADOS na API Gemini (AI Studio key); o único disponível é
+    // gemini-embedding-001, configurado p/ outputDimensionality=768 (cabe na coluna
+    // vector(768)). ATENÇÃO: os vetores EXISTENTES foram gerados com text-embedding-004
+    // (modelo diferente = espaço vetorial diferente) → é preciso RE-EMBED de todas as
+    // entidades p/ a busca semântica ficar consistente. Até lá, similaridade entre
+    // vetores novos e antigos NÃO é confiável.
+    const key = envKey("GEMINI_API_KEY");
+    const EMB_MODEL = "gemini-embedding-001";
+    const inputs: string[] = Array.isArray(payload.input) ? payload.input : [payload.input];
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${EMB_MODEL}:batchEmbedContents?key=${key}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requests: inputs.map((t) => ({ model: `models/${EMB_MODEL}`, content: { parts: [{ text: t }] }, outputDimensionality: 768 })) }),
+      },
+    );
+    const d = await res.json();
+    if (!res.ok) {
+      return new Response(JSON.stringify({ error: d?.error ?? d }), { status: res.status, headers: { "Content-Type": "application/json" } });
+    }
+    const data = (d.embeddings || []).map((e: any, i: number) => ({ object: "embedding", index: i, embedding: e.values }));
+    return new Response(JSON.stringify({ object: "list", data, model }), { status: 200, headers: { "Content-Type": "application/json" } });
   }
 
   // ---------- CHAT (Anthropic nativo, traduzido p/ OpenAI) ----------

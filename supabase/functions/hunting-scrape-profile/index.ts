@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { buildScoringPackage } from '../_shared/icp-packages.ts';
 import { logAIExecution, extractTokensFromResponse } from '../_shared/ai-logger.ts';
 import { consumeAICredits } from '../_shared/ai-credit-consumption.ts';
@@ -268,7 +269,7 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const firecrawlApiKey = Deno.env.get('FIRECRAWL_API_KEY');
     const apifyApiToken = Deno.env.get('APIFY_API_TOKEN');
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    const lovableApiKey = "direct";
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -461,7 +462,7 @@ Deno.serve(async (req) => {
           certifications: extractedData.certifications || [],
         };
 
-        const scoreResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        const scoreResponse = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${lovableApiKey}`,

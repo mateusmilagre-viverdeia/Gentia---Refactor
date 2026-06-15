@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { buildDiscoveryPackage, mapSeniorityToApollo } from '../_shared/icp-packages.ts';
 import { logAIExecution } from '../_shared/ai-logger.ts';
 import { consumeAICredits } from '../_shared/ai-credit-consumption.ts';
@@ -377,7 +378,7 @@ async function triggerEvabootFallback(
     }
 
     // Generate Sales Navigator URL via Lovable AI only if not pre-computed
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    const lovableApiKey = "direct";
 
     if (!salesNavUrl && lovableApiKey) {
       const allTitles = [query, ...titleVariations].slice(0, 6);
@@ -385,7 +386,7 @@ async function triggerEvabootFallback(
         ? (locationFilter.state ? `${locationFilter.city}, ${locationFilter.state}` : locationFilter.city)
         : 'Brasil';
 
-      const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      const aiResponse = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${lovableApiKey}`,

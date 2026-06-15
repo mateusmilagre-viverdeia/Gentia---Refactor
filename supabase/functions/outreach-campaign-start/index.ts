@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { getConfiguredModel } from '../_shared/ai-model-config.ts';
 import { consumeAICredits, accumulateUsage } from '../_shared/ai-credit-consumption.ts';
@@ -27,7 +28,7 @@ serve(async (req: Request): Promise<Response> => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  const lovableApiKey = Deno.env.get("LOVABLE_API_KEY") ?? "";
+  const lovableApiKey = "direct" ?? "";
 
   try {
     const authHeader = req.headers.get("Authorization");
@@ -191,7 +192,7 @@ serve(async (req: Request): Promise<Response> => {
       
       if (lovableApiKey && campaign.ai_persona) {
         try {
-          const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          const aiResponse = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
             headers: {
               "Authorization": `Bearer ${lovableApiKey}`,

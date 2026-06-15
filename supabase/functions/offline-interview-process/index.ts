@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { consumeAICredits } from '../_shared/ai-credit-consumption.ts';
 
@@ -295,7 +296,7 @@ async function createCultureSessionFromOffline(args: {
   if (sErr || !session) throw new Error(`Failed to create culture session: ${sErr?.message}`);
 
   // Use AI to split transcript into Q/A pairs
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const LOVABLE_API_KEY = "direct";
   let pairs: Array<{ questionIndex: number; questionText: string; candidateResponse: string; valueLabel?: string; startSeconds?: number; endSeconds?: number }> = [];
 
   if (LOVABLE_API_KEY) {
@@ -322,7 +323,7 @@ Responda APENAS em JSON válido:
 }`;
 
     try {
-      const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const aiResp = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({

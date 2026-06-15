@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -85,7 +86,7 @@ serve(async (req: Request) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const LOVABLE_API_KEY = "direct";
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ error: "ai_not_configured" }), {
         status: 500,
@@ -125,7 +126,7 @@ Validade da proposta: ${body.validity_days || 15} dias
 
 Gere a proposta comercial completa em Markdown.`;
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiResp = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,

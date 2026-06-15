@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { sendWhatsAppViaZApi, isZApiConfigured } from '../_shared/whatsapp-zapi.ts';
 import { consumeAICredits } from '../_shared/ai-credit-consumption.ts';
 import { sendOutreachEmail } from '../_shared/outreach-email-sender.ts';
@@ -35,7 +36,7 @@ Deno.serve(async (req) => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const supabase = createClient(supabaseUrl, serviceRoleKey);
-  const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+  const lovableApiKey = "direct";
 
   try {
     // Find conversations that need follow-up
@@ -118,7 +119,7 @@ Se o template contém placeholders como {nome}, substitua com os dados do candid
 Se não, melhore levemente a mensagem mantendo o tom original.
 Retorne APENAS o texto da mensagem, sem aspas ou explicações.`;
 
-          const aiResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          const aiResp = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${lovableApiKey}`,

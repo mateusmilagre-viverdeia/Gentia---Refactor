@@ -2,6 +2,7 @@
 // acontece no fechamento da sessão (culture-interview-complete / technical-interview-complete)
 // ou via interview-watchdog para sessões abandonadas. NÃO debitar créditos aqui.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { resolvePrompt } from "../_shared/aiPrompts.ts";
 import { getConfiguredModel } from "../_shared/ai-model-config.ts";
@@ -374,7 +375,7 @@ com perguntas básicas primeiro.`;
       // 5. Send to Gemini for analysis if we have data
       if (profileData) {
         console.log("🤖 Sending profile data to AI for analysis...");
-        const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+        const LOVABLE_API_KEY = "direct";
 
         if (LOVABLE_API_KEY) {
           const jobDescription = jobContext?.description || jobContext?.title || "";
@@ -391,7 +392,7 @@ SKILLS REQUERIDAS: ${requiredSkills.join(", ")}
 
 Retorne usando a função extract_resume_intelligence.`;
 
-          const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          const aiResponse = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
             headers: {
               "Authorization": `Bearer ${LOVABLE_API_KEY}`,

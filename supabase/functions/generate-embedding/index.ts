@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { consumeAICredits } from '../_shared/ai-credit-consumption.ts';
 
@@ -121,12 +122,12 @@ serve(async (req) => {
     }
 
     // Generate embedding using Lovable AI (Gemini)
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const LOVABLE_API_KEY = "direct";
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    const embeddingResponse = await fetch('https://ai.gateway.lovable.dev/v1/embeddings', {
+    const embeddingResponse = await aiFetch('https://ai.gateway.lovable.dev/v1/embeddings', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${LOVABLE_API_KEY}`,

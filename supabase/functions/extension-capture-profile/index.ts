@@ -3,6 +3,7 @@
 // cria candidato (e application se job_id informado) e dispara cross-match.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { consumeAICredits } from "../_shared/ai-credit-consumption.ts";
 
 const corsHeaders = {
@@ -14,7 +15,7 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+const LOVABLE_API_KEY = "direct";
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), {
@@ -45,7 +46,7 @@ interface CaptureBody {
 async function structureWithLLM(profile: CaptureBody["profile_data"], supabase: any, accountId: string) {
   if (!LOVABLE_API_KEY) return null;
   try {
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const resp = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,

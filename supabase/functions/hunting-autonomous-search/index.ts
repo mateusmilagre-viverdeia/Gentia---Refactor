@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { consumeAICredits, accumulateUsage } from '../_shared/ai-credit-consumption.ts';
 import { buildDiscoveryPackage, mapSeniorityToApollo } from '../_shared/icp-packages.ts';
 import { logAIExecution } from '../_shared/ai-logger.ts';
@@ -232,7 +233,7 @@ Deno.serve(async (req) => {
     }
 
     // 4. Generate multiple intelligent search queries via AI with tool calling
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    const lovableApiKey = "direct";
     if (!lovableApiKey) {
       await supabase.from('recruitment_hunting_searches').update({ status: 'failed', error_message: 'LOVABLE_API_KEY not configured' }).eq('id', search.id);
       return new Response(
@@ -275,7 +276,7 @@ REGRAS:
 - Se houver negative_keywords, use operador "-" para excluí-las
 - Máximo 200 caracteres por query`;
 
-    const queryResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const queryResponse = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${lovableApiKey}`,
@@ -518,7 +519,7 @@ INSTRUÇÕES DE SCORING:
 - total_score: média ponderada (40/20/20/20)
 - Se detectar deal_breakers, marque em deal_breaker_flags e reduza o total_score drasticamente`;
 
-        const scoreResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        const scoreResponse = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${lovableApiKey}`,

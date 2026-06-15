@@ -1,6 +1,7 @@
 // Cross-match executor: computes cosine similarity between candidate and other open jobs,
 // generates AI reasoning for high-score matches, inserts suggestions and creates internal notifications.
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { consumeAICredits } from "../_shared/ai-credit-consumption.ts";
 
 const corsHeaders = {
@@ -53,11 +54,11 @@ async function generateReasoning(
   supabase?: any,
   accountId?: string,
 ): Promise<string> {
-  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  const apiKey = "direct";
   if (!apiKey) return `Compatibilidade de ${score}% entre o perfil e a vaga "${targetJobTitle}".`;
 
   try {
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const resp = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,

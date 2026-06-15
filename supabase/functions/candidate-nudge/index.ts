@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { sendWhatsAppViaMeta, isMetaWhatsAppConfigured } from "../_shared/whatsapp-meta.ts";
 import { sendEmailViaResend } from "../_shared/resend-email.ts";
@@ -103,7 +104,7 @@ serve(async (req) => {
     }
 
     // Generate personalized nudge messages and send
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const LOVABLE_API_KEY = "direct";
     const model = await getConfiguredModel('candidate_nudge', 'google/gemini-3-flash-preview');
     let nudgedCount = 0;
 
@@ -118,7 +119,7 @@ serve(async (req) => {
       // Try AI-personalized message
       if (LOVABLE_API_KEY) {
         try {
-          const aiResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          const aiResp = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${LOVABLE_API_KEY}`,

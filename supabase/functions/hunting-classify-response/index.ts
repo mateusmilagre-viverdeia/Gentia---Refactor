@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { consumeAICredits } from '../_shared/ai-credit-consumption.ts';
 
 const corsHeaders = {
@@ -14,7 +15,7 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    const lovableApiKey = "direct";
 
     if (!lovableApiKey) {
       return new Response(
@@ -71,7 +72,7 @@ Deno.serve(async (req) => {
     }
 
     // Classify the response using AI
-    const classifyResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const classifyResponse = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${lovableApiKey}`,
@@ -191,7 +192,7 @@ Retorne APENAS o JSON:
     if (classification.classificacao === 'duvida' && huntingResult) {
       const candidateName = huntingResult.extracted_data?.name || 'candidato';
       
-      const replyResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      const replyResponse = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${lovableApiKey}`,

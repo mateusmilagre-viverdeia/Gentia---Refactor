@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { getConfiguredModel } from "../_shared/ai-model-config.ts";
 import { consumeAICredits } from "../_shared/ai-credit-consumption.ts";
@@ -57,14 +58,14 @@ serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const LOVABLE_API_KEY = "direct";
     if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY not configured');
 
     const model = await getConfiguredModel('enrich_candidate_context', 'google/gemini-3-flash-preview');
 
     console.log(`🧠 Enriching context for candidate ${candidate_id} with model ${model}`);
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${LOVABLE_API_KEY}`,

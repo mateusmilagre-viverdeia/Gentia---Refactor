@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { consumeAICredits } from '../_shared/ai-credit-consumption.ts';
 
 const corsHeaders = {
@@ -84,7 +85,7 @@ Skills Desejáveis: ${(jd?.desired_skills || []).join(', ') || 'N/A'}
 Responsabilidades: ${(jd?.responsibilities || []).join(', ') || 'N/A'}
     `.trim();
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const LOVABLE_API_KEY = "direct";
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ error: 'AI not configured' }), {
         status: 500,
@@ -112,7 +113,7 @@ Responda EXATAMENTE neste formato JSON (sem markdown):
   "recommended_next_steps": ["Passo 1", "Passo 2"]
 }`;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,

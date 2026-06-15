@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { getConfiguredModel } from '../_shared/ai-model-config.ts';
 import { consumeAICredits, accumulateUsage } from '../_shared/ai-credit-consumption.ts';
@@ -60,11 +61,11 @@ let _accumulatedUsage = { prompt_tokens: 0, completion_tokens: 0 };
 
 // Extract structured data from markdown using LLM
 async function extractJobData(markdown: string, url: string): Promise<JobReference | null> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const LOVABLE_API_KEY = "direct";
   if (!LOVABLE_API_KEY) return null;
 
   try {
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
@@ -135,7 +136,7 @@ Se uma informação não estiver disponível, use array vazio ou null.`
 
 // Generate insights from references using LLM
 async function generateInsights(references: JobReference[], jobTitle: string): Promise<BenchmarkResponse['insights']> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const LOVABLE_API_KEY = "direct";
   if (!LOVABLE_API_KEY || references.length === 0) {
     return {
       common_requirements: [],
@@ -153,7 +154,7 @@ async function generateInsights(references: JobReference[], jobTitle: string): P
 - Cultura: ${r.highlights.culture_points?.join(', ') || 'N/A'}`
     ).join('\n\n');
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,

@@ -5,6 +5,7 @@
 // Uso (admin): POST { sessionId } com Authorization: Bearer <SERVICE_ROLE_KEY>
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { calculateFinalScoreLegacy } from "../_shared/culture-evaluation-v2.ts";
 
@@ -118,7 +119,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
+    const LOVABLE_API_KEY = "direct"!;
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
@@ -221,7 +222,7 @@ serve(async (req) => {
     const userPrompt = buildPromptV1(responses, agentCriteria, cultureContext, jobContext, sellingContent);
     const model = requestedModel || "google/gemini-2.5-pro";
 
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiRes = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({

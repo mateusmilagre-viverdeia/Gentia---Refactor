@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { sendWhatsAppViaMeta, isMetaWhatsAppConfigured, sendWhatsAppTemplateMeta, getWorkflowTemplateConfig } from "../_shared/whatsapp-meta.ts";
 import { createLogger } from "../_shared/logger.ts";
@@ -40,7 +41,7 @@ serve(async (req) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+  const lovableApiKey = "direct";
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
@@ -123,7 +124,7 @@ EXEMPLO BOM:
 "Olá Maria! Agradeço muito sua participação no processo para Analista na TechCo. Neste momento, seguiremos com perfis mais alinhados ao momento da vaga. Seu interesse foi muito bem-vindo e te encorajo a acompanhar nossas próximas oportunidades! 🤝"`;
 
       try {
-        const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        const aiResponse = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${lovableApiKey}`,

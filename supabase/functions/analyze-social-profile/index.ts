@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { getConfiguredModel } from '../_shared/ai-model-config.ts';
 import { consumeAICredits } from '../_shared/ai-credit-consumption.ts';
@@ -125,7 +126,7 @@ serve(async (req) => {
       );
     }
 
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    const lovableApiKey = "direct";
     if (!lovableApiKey) {
       return new Response(
         JSON.stringify({ success: false, error: 'LOVABLE_API_KEY não configurada' }),
@@ -153,7 +154,7 @@ serve(async (req) => {
 
       if (postTexts.length >= 3) {
         try {
-          const discResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          const discResponse = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${lovableApiKey}`,
@@ -272,7 +273,7 @@ Analise e estime o perfil DISC deste candidato.`
       console.log('[analyze-social] Analyzing tech fit against ICP');
 
       try {
-        const techResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        const techResponse = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${lovableApiKey}`,

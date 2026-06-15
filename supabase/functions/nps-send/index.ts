@@ -2,6 +2,7 @@
 // Triggers: 'exit' (imediato) ou 'hired' (cria pending para 7d depois — disparado pelo cron sla-monitor)
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { RESEND_DEFAULT_FROM_EMAIL } from "../_shared/resend-email.ts";
 
@@ -10,7 +11,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") ?? "";
+const LOVABLE_API_KEY = "direct" ?? "";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -66,7 +67,7 @@ Regras:
 Retorne apenas a mensagem, sem aspas, sem explicações.`;
 
   try {
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${LOVABLE_API_KEY}`,

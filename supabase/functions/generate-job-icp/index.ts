@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { getConfiguredModel } from '../_shared/ai-model-config.ts';
 import { consumeAICredits } from '../_shared/ai-credit-consumption.ts';
 import { logAIExecution, extractTokensFromResponse } from '../_shared/ai-logger.ts';
@@ -22,7 +23,7 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    const lovableApiKey = "direct";
 
     if (!lovableApiKey) {
       console.error('[generate-job-icp] LOVABLE_API_KEY not configured');
@@ -486,7 +487,7 @@ Retorne o ICP no seguinte formato JSON:
     // Call Lovable AI to generate ICP
     const icpGenStartTime = Date.now();
     const modelUsed = await getConfiguredModel("generate-job-icp", "google/gemini-2.5-flash");
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const aiResponse = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${lovableApiKey}`,

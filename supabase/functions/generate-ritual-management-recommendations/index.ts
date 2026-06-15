@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { checkRateLimit, unauthorizedResponse, rateLimitExceededResponse } from '../_shared/rate-limit.ts';
 
@@ -188,7 +189,7 @@ FORMATO DE RESPOSTA (JSON):
 
 Gere de 3 a 8 recomendações, priorizando os rituais de maior duração e frequência.`;
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const LOVABLE_API_KEY = "direct";
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ error: "API key not configured" }), {
         status: 500,
@@ -204,7 +205,7 @@ Gere de 3 a 8 recomendações, priorizando os rituais de maior duração e frequ
       });
     }
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,

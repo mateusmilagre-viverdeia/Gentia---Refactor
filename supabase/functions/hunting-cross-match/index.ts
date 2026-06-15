@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { consumeAICredits, accumulateUsage } from '../_shared/ai-credit-consumption.ts';
 
 const corsHeaders = {
@@ -84,7 +85,7 @@ Deno.serve(async (req) => {
     const existingJobIds = new Set((existingSuggestions || []).map((s: any) => s.suggested_job_id));
 
     // 4. Use AI to compare candidate against each ICP
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    const lovableApiKey = "direct";
     if (!lovableApiKey) {
       return new Response(
         JSON.stringify({ success: false, error: 'AI not configured' }),
@@ -131,7 +132,7 @@ VAGA ALVO: ${jobTitle}
 Retorne score 0-100 e razão curta.`;
 
       try {
-        const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        const resp = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${lovableApiKey}`,

@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { consumeAICredits } from '../_shared/ai-credit-consumption.ts';
 
 const corsHeaders = {
@@ -43,7 +44,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const LOVABLE_API_KEY = "direct";
     if (!LOVABLE_API_KEY) {
       return new Response(
         JSON.stringify({ success: false, error: 'AI não configurada' }),
@@ -66,7 +67,7 @@ Regras:
     const userPrompt = `Cargo: "${title}"${industry ? `\nSetor: ${industry}` : ''}
 \nGere variações equivalentes deste cargo no mercado de trabalho:`;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,

@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { consumeAICredits } from '../_shared/ai-credit-consumption.ts';
 
 const corsHeaders = {
@@ -28,7 +29,7 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const lovableKey = Deno.env.get('LOVABLE_API_KEY');
+    const lovableKey = "direct";
 
     if (!lovableKey) {
       return new Response(JSON.stringify({ success: false, error: 'LOVABLE_API_KEY ausente' }),
@@ -129,7 +130,7 @@ ${JSON.stringify(profilesPayload, null, 2)}
 
 Retorne via tool call \`rerank_candidates\` um array com a avaliação de TODOS os ${profilesPayload.length} candidatos, na mesma ordem de idx.`;
 
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const aiResponse = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${lovableKey}`,

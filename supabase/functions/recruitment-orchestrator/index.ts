@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { sendEmailViaResend } from "../_shared/resend-email.ts";
 import { sendWhatsAppViaMeta, isMetaWhatsAppConfigured, sendWhatsAppTemplateMeta, getWorkflowTemplateConfig } from "../_shared/whatsapp-meta.ts";
@@ -151,10 +152,10 @@ async function generatePersonalizedAdvanceMessage(
   const fallback = `Olá, ${candidateName}! Você avançou para a próxima etapa do processo seletivo para a vaga de *${jobTitle}*.\n\nVocê já pode realizar a próxima etapa:\n*${nextStepLabel}*\n👉 ${nextStepUrl}\n\nAcesse o link acima para continuar.`;
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const LOVABLE_API_KEY = "direct";
     if (!LOVABLE_API_KEY) return fallback;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${LOVABLE_API_KEY}`,

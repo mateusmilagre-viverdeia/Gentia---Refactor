@@ -1,5 +1,6 @@
 // Compare Finalists — análise comparativa de candidatos finalistas via Lovable AI (streaming SSE)
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { consumeAICredits } from "../_shared/ai-credit-consumption.ts";
 
@@ -204,11 +205,10 @@ serve(async (req) => {
     ].filter(Boolean).join("\n");
 
     // 4) Chama Lovable AI Gateway com streaming
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
+    const apiKey = "direct";
     if (!apiKey) return json({ error: "LOVABLE_API_KEY não configurada" }, 500);
 
-    const aiResp = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
+    const aiResp = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions",
       {
         method: "POST",
         headers: {

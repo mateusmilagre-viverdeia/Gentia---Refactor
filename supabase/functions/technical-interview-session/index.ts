@@ -2,6 +2,7 @@
 // acontece no fechamento da sessão (culture-interview-complete / technical-interview-complete)
 // ou via interview-watchdog para sessões abandonadas. NÃO debitar créditos aqui.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { resolvePrompt } from "../_shared/aiPrompts.ts";
 import { getConfiguredModel } from "../_shared/ai-model-config.ts";
@@ -54,7 +55,7 @@ serve(async (req) => {
 
   try {
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const LOVABLE_API_KEY = "direct";
     
     if (!OPENAI_API_KEY) {
       console.error("❌ OPENAI_API_KEY is not configured");
@@ -299,7 +300,7 @@ Retorne APENAS um JSON válido, sem markdown:
 }`;
 
       try {
-        const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        const aiResponse = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
           headers: {
             Authorization: `Bearer ${LOVABLE_API_KEY}`,

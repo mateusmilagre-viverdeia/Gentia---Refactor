@@ -1,6 +1,7 @@
 // Recruiter Copilot — chat IA contextual sobre candidatos, vagas e portfólio
 // Tool calling + débito de créditos da conta + persistência em threads/messages
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { compressTranscript } from "../_shared/transcript-compress.ts";
 import { consumeAICredits } from "../_shared/ai-credit-consumption.ts";
@@ -44,7 +45,7 @@ function pickModel(opts: {
 async function callGateway(payload: any, apiKey: string): Promise<{ resp: Response; usedFallback: boolean; finalModel: string }> {
   const originalModel = payload.model;
   const doFetch = (model: string) =>
-    fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({ ...payload, model }),
@@ -478,7 +479,7 @@ serve(async (req) => {
       { role: "user", content: message },
     ];
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const LOVABLE_API_KEY = "direct";
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
 
     // Pick model tier based on heuristics + user override

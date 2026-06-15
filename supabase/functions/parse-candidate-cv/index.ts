@@ -4,6 +4,7 @@
 // envia o PDF binário para o LLM.
 // Cobra créditos via consumeAICredits (fórmula oficial com margem).
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { aiFetch } from "../_shared/ai-gateway.ts";
 import { extractText, getDocumentProxy } from "npm:unpdf@0.11.0";
 import { consumeAICredits } from '../_shared/ai-credit-consumption.ts';
 
@@ -45,7 +46,7 @@ Responda APENAS com JSON válido (sem markdown, sem comentários) com este schem
 Não invente dados. Use null/array vazio quando não houver informação.`;
 
 async function callLLM(content: { type: "text" | "file"; data: string; mimeType?: string }) {
-  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  const apiKey = "direct";
   if (!apiKey) throw new Error("LOVABLE_API_KEY not set");
 
   const userContent: any[] = content.type === "text"
