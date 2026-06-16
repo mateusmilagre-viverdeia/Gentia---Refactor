@@ -94,6 +94,10 @@ export async function aiFetch(url: string, init: RequestInit): Promise<Response>
   const key = provider === "openai" ? envKey("OPENAI_API_KEY") : envKey("GEMINI_API_KEY");
   const body: Record<string, unknown> = { ...payload, model: stripPrefix(payload.model) };
   if (provider === "google") {
+    // Campos EXCLUSIVOS da OpenAI que o endpoint OpenAI-compat do Google rejeita com
+    // HTTP 400 ("Unknown name ...") -> remove p/ Google (defensivo, caso o chamador envie).
+    delete (body as Record<string, unknown>).prompt_cache_key;
+    delete (body as Record<string, unknown>).prompt_cache_retention;
     // tool_choice forçado-por-nome -> MALFORMED_FUNCTION_CALL; usa "auto".
     if (body.tools && body.tool_choice && typeof body.tool_choice === "object") body.tool_choice = "auto";
     // VELOCIDADE: Gemini Flash faz "thinking" por padrão (~3x mais lento, gasta tokens).

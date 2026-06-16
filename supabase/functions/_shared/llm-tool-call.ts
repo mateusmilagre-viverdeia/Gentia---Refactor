@@ -114,7 +114,11 @@ async function callOpenAICompatible<T>(
       ? "auto"
       : { type: "function", function: { name: params.tool.name } },
   };
-  if (params.cacheKey) body.prompt_cache_key = params.cacheKey;
+  // prompt_cache_key é EXCLUSIVO da OpenAI. O endpoint OpenAI-compat do Google REJEITA
+  // campos desconhecidos com HTTP 400 ("Unknown name prompt_cache_key") -> zerava o parecer
+  // (técnico e cultural) no modo direto. O gateway Lovable tolerava; o desacople expôs.
+  // Só envia p/ OpenAI direto (ou gateway), NUNCA p/ Google.
+  if (params.cacheKey && endpoint !== GOOGLE_OPENAI_URL) body.prompt_cache_key = params.cacheKey;
   // VELOCIDADE: Gemini Flash faz "thinking" por padrão (~3-4x mais lento; o gateway
   // Lovable rodava SEM). reasoning_effort="none" restaura a velocidade. Modelos "pro"
   // exigem thinking -> não mexe. (Mesmo fix do _shared/ai-gateway.ts, mas este caminho

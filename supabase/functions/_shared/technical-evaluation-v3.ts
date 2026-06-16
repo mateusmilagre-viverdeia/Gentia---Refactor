@@ -489,6 +489,9 @@ export async function evaluateTechnicalV3(args: {
     },
     maxTokens: args.maxTokens ?? 3500,
     cacheKey: args.jobId ?? undefined,
+    // Resiliência: se o modelo primário falhar com erro não-transiente (ex.: 400),
+    // tenta Claude antes de zerar o parecer (evita o "Erro na avaliação automática").
+    fallbackModels: ["claude-sonnet-4-5"],
   });
 
   const result = applyDeterministicRules(rawOutput, {
