@@ -70,7 +70,8 @@ export async function resolveCulturalAgentId(
       .from("recruitment_agents")
       .select("id")
       .eq("account_id", accountId)
-      .in("type", ["cultural", "structured"])
+      // Taxonomia real: agente cultural = type 'structured' ('cultural' não existe em recruitment_agents).
+      .eq("type", "structured")
       .eq("is_active", true)
       .order("created_at", { ascending: true })
       .limit(1)

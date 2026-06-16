@@ -100,8 +100,11 @@ serve(async (req) => {
 
     // ───── Build prompt by agent type ─────
     let instructions = "";
-    // Taxonomia atual: agente técnico tem type 'adaptive' (mantém 'technical'/'tecnico' legados).
-    if (agent.type === "adaptive" || agent.type === "technical" || agent.type === "tecnico") {
+    // Taxonomia real de recruitment_agents.type: adaptive=técnico, disc=comportamental,
+    // structured=cultural. Detecta técnico por type 'adaptive' + fallback pelo nome do agente.
+    const isTechnicalAgent = agent.type === "adaptive" ||
+      /t[ée]cnic|technical/i.test(agent.name ?? "");
+    if (isTechnicalAgent) {
       instructions = buildTechnicalDemoPrompt(companyName, firstName);
     } else {
       // default to cultural-style demo for any other agent

@@ -183,7 +183,8 @@ serve(async (req) => {
     }
     if (!agentId) {
       const { data: agent } = await supabase.from("recruitment_agents")
-        .select("id").eq("account_id", accountId).in("type", ["cultural", "structured"]).eq("is_active", true).limit(1).maybeSingle();
+        // Taxonomia real: agente cultural = type 'structured' ('cultural' não existe em recruitment_agents).
+        .select("id").eq("account_id", accountId).eq("type", "structured").eq("is_active", true).limit(1).maybeSingle();
       agentId = agent?.id || null;
     }
     if (!agentId) return new Response(JSON.stringify({ error: "no agent" }), { status: 400, headers: corsHeaders });

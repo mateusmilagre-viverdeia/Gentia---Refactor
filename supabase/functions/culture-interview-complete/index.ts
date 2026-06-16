@@ -1255,13 +1255,13 @@ serve(async (req) => {
       }
 
       // Level 4: any active cultural/structured agent for account
-      // (seeded agents use type='structured', custom ones may use 'cultural')
+      // Taxonomia real: agente cultural = type 'structured' ('cultural' não existe em recruitment_agents).
       if (!agentId) {
         const { data: defaultAgent } = await supabase
           .from('recruitment_agents')
           .select('id')
           .eq('account_id', accountId)
-          .in('type', ['cultural', 'structured'])
+          .eq('type', 'structured')
           .eq('is_active', true)
           .limit(1)
           .maybeSingle();

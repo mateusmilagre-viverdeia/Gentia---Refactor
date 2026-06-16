@@ -257,7 +257,8 @@ async function createCultureSessionFromOffline(args: {
   if (!agentId) {
     const { data: agent } = await supabaseAdmin
       .from("recruitment_agents")
-      .select("id").eq("account_id", upload.account_id).in("type", ["cultural", "structured"]).eq("is_active", true)
+      // Taxonomia real: agente cultural = type 'structured' ('cultural' não existe em recruitment_agents).
+      .select("id").eq("account_id", upload.account_id).eq("type", "structured").eq("is_active", true)
       .limit(1).maybeSingle();
     agentId = agent?.id || null;
   }
@@ -400,8 +401,8 @@ async function createTechnicalSessionFromOffline(args: {
   if (!agentId) {
     const { data: agent } = await supabaseAdmin
       .from("recruitment_agents")
-      // Taxonomia atual: o agente técnico tem type 'adaptive' (não 'technical', que não existe no DB).
-      .select("id").eq("account_id", upload.account_id).in("type", ["adaptive", "technical"]).eq("is_active", true)
+      // Taxonomia real: agente técnico = type 'adaptive' ('technical' não existe em recruitment_agents).
+      .select("id").eq("account_id", upload.account_id).eq("type", "adaptive").eq("is_active", true)
       .limit(1).maybeSingle();
     agentId = agent?.id || null;
   }
