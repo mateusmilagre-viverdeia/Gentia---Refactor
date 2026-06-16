@@ -24,10 +24,17 @@ const PUBLIC_PATH_PREFIXES = [
   "/vagas/",
 ];
 
-const CANONICAL_ORIGIN = "https://gentia.tech";
-
 export function redirectToCanonicalHost(): void {
   if (typeof window === "undefined") return;
+
+  // Domínio canônico CONFIGURÁVEL por ambiente (VITE_PUBLIC_ORIGIN). Sem ele — ex.: testando
+  // no domínio publicado do Lovable ANTES de migrar — NÃO redireciona: tudo fica no domínio
+  // atual (evita o "pulo" para gentia.tech durante os testes). Defina como https://gentia.tech
+  // só quando o domínio de produção estiver no ar.
+  const canonical = (import.meta.env.VITE_PUBLIC_ORIGIN as string | undefined)
+    ?.trim()
+    ?.replace(/\/+$/, "");
+  if (!canonical) return;
 
   // Não redireciona dentro do editor (iframe do Lovable).
   try {
@@ -36,6 +43,9 @@ export function redirectToCanonicalHost(): void {
     // cross-origin frame → também é editor; não redirecionar
     return;
   }
+
+  // Já está no domínio canônico? nada a fazer (evita loop).
+  if (window.location.origin === canonical) return;
 
   const host = window.location.hostname.toLowerCase();
   const isLovableHost = LOVABLE_HOST_SUFFIXES.some((suffix) =>
@@ -49,6 +59,6 @@ export function redirectToCanonicalHost(): void {
   );
   if (!isPublicRoute) return;
 
-  const target = `${CANONICAL_ORIGIN}${path}${window.location.search}${window.location.hash}`;
+  const target = `${canonical}${path}${window.location.search}${window.location.hash}`;
   window.location.replace(target);
 }

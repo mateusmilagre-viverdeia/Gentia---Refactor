@@ -10,21 +10,22 @@
  * Always use these helpers to build URLs that will be shared externally.
  */
 
-const PROD_HOSTS = new Set([
-  "gentia.tech",
-  "www.gentia.tech",
-  "cultura.eppartners.com.br",
-  "gentia.eppartners.com.br",
-]);
-
 const DEFAULT_PUBLIC_ORIGIN = "https://gentia.tech";
 
+/**
+ * Origem pública canônica do app — CONFIGURÁVEL por ambiente via `VITE_PUBLIC_ORIGIN`.
+ *  - Produção (após migrar o domínio): defina `VITE_PUBLIC_ORIGIN=https://gentia.tech`.
+ *  - Teste/preview do Lovable (antes de migrar): deixe VAZIO -> usa a origem ATUAL
+ *    (o próprio domínio de teste), em vez de pular para gentia.tech hardcoded.
+ * Sem override, usa `window.location.origin` em qualquer host real; só evita o iframe do
+ * EDITOR do Lovable (*.lovableproject.com), que não é navegável/compartilhável.
+ */
 export function getPublicSiteUrl(): string {
+  const override = (import.meta.env.VITE_PUBLIC_ORIGIN as string | undefined)?.trim();
+  if (override) return override.replace(/\/+$/, "");
   if (typeof window !== "undefined") {
-    const host = window.location.hostname;
-    if (PROD_HOSTS.has(host)) {
-      return window.location.origin;
-    }
+    const host = window.location.hostname.toLowerCase();
+    if (!host.endsWith(".lovableproject.com")) return window.location.origin;
   }
   return DEFAULT_PUBLIC_ORIGIN;
 }
