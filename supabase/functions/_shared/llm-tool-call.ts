@@ -35,7 +35,9 @@ export interface CallLLMToolParams {
   retries?: number;
   /** Optional API key override (defaults to LOVABLE_API_KEY env) — força o gateway. */
   apiKey?: string;
-  /** Optional stable identifier used as OpenAI `prompt_cache_key` (no-op no Gemini). */
+  /** Optional stable identifier para OpenAI `prompt_cache_key`. NÃO é no-op no Gemini:
+   *  o endpoint OpenAI-compat do Google REJEITA o campo com HTTP 400, então ele só é
+   *  enviado quando endpoint != GOOGLE_OPENAI_URL (ver callOpenAICompatible). */
   cacheKey?: string;
   /** Modelos de fallback, tentados em ordem se o primário falhar (LLM_AUDIT §7). */
   fallbackModels?: string[];
