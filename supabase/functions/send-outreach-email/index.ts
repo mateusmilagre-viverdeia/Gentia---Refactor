@@ -6,7 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const RESEND_GATEWAY_URL = "https://connector-gateway.lovable.dev/resend";
+// Desacoplado do conector Lovable: envia DIRETO pela API do Resend (RESEND_API_KEY).
+const RESEND_API_URL = "https://api.resend.com";
 
 interface SendEmailParams {
   to: string;
@@ -20,10 +21,8 @@ interface SendEmailParams {
 }
 
 async function sendEmailViaResend(params: SendEmailParams): Promise<{ messageId?: string; raw: unknown }> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY_1") ?? Deno.env.get("RESEND_API_KEY");
 
-  if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
   if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY not configured");
 
   // Reply-To uses the inbound webhook domain configured on Resend.
@@ -54,12 +53,11 @@ async function sendEmailViaResend(params: SendEmailParams): Promise<{ messageId?
     ],
   };
 
-  const res = await fetch(`${RESEND_GATEWAY_URL}/emails`, {
+  const res = await fetch(`${RESEND_API_URL}/emails`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-      "X-Connection-Api-Key": RESEND_API_KEY,
+      "Authorization": `Bearer ${RESEND_API_KEY}`,
     },
     body: JSON.stringify(body),
   });
