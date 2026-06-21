@@ -30,7 +30,15 @@
 1. **Tirar o sistema antigo do ar** (Lovable) — início do downtime (evita novos dados perdidos).
 2. **Exportar** os dados de produção do Lovable (snapshot final) e **importar no destino**. *(O cliente já validou uma carga de teste nesta fase 1 — repetir com o snapshot final.)*
 3. **Storage**: migrar buckets (CVs/avatares/etc.) origem→destino. **⚠️ Após importar, RE-CHECAR a PRIVACIDADE dos buckets** — a importação pode resetar `public` (achado real: deixou `candidate-files` público; corrigido em `20260606170000`). Devem ser **privados**: `candidate-files`, `external-resumes`, `project-documents`, `technical-interview-audio`, `culture-interview-audio`, `offline-interviews` → `update storage.buckets set public=false where id in (...);`.
-4. **Auth**: migrar usuários (`auth.users`) se ainda não vierem no export.
+4. **Auth**: migrar usuários (`auth.users`) se ainda não vierem no export. **Preservar os hashes `encrypted_password`** no export do schema `auth` (pg_dump) → assim os usuários mantêm a senha e o passo 5 funciona.
+5. **Forçar troca de senha de TODOS (estratégia de migração)** — gate de front `must_change_password` (`ProtectedRoute`, commit `87f78f1`; reusa o flag/tela `/conta/perfil` que limpa o flag ao trocar):
+   - **Se as senhas MIGRARAM** (hashes vieram): o usuário loga com a senha antiga e é **obrigado** a trocar no 1º acesso. Setar o flag em todos:
+     ```sql
+     update auth.users set raw_user_meta_data = coalesce(raw_user_meta_data,'{}'::jsonb)
+       || '{"must_change_password": true}'::jsonb;   -- opcional: ... where email <> 'dev@viverdeia.ai';  (não trancar o admin)
+     ```
+     ⚠️ Requer o **front da Fase 6 no ar** (o gate é código de front) — só ativa depois do build do Lovable com `87f78f1`. Candidatos usam outro fluxo (não passam pelo gate).
+   - **Se as senhas NÃO migraram** (ninguém consegue logar → o gate nunca dispara): em vez do flag, **disparar recovery a TODOS** (email "redefina sua senha"), com throttle p/ o limite do Resend. (Email já desacoplado → Resend direto.)
 **Gate 1:** contagens batem com produção:
 ```sh
 # template
@@ -78,7 +86,7 @@ curl -s -H "Authorization: Bearer $TOKEN" -X POST "$Q" -H "Content-Type: applica
 **Gate 5:** nenhum cron aponta p/ a origem; `grep -r axumduklmiiptumdsgtu` no repo = 0 (fora de docs/migrations históricas).
 
 ## Fase 6 — Front
-1. Configurar `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` do destino no build.
+1. Configurar `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` do destino no build **+ `VITE_PUBLIC_ORIGIN=https://gentia.tech`** (domínio canônico configurável, commit `f60bc55`: vazio durante os testes no Lovable; `gentia.tech` no go-live — senão os links públicos não viram pro domínio certo). Configurar tb o **Send Email Hook** + `SEND_EMAIL_HOOK_SECRET` (auth-email-hook nativo) se ainda não estiver.
 2. Aplicar **signed URLs** no portal e marketplace (consumir `portal-data` / `getSignedFileUrl`) — `SECURITY_AUDIT §7` e §10.1.
 3. Build + smoke test do front apontando para o destino.
 **Gate 6:** login, listar candidatos, abrir CV (signed URL), portal por token — todos OK.
