@@ -248,6 +248,9 @@ const CacheVersionCheck = ({ children }: { children: React.ReactNode }) => {
 };
 
 // Protected Route component
+// Tela onde o usuário troca a senha e o flag must_change_password é limpo (Conta → Perfil).
+const FORCE_PASSWORD_CHANGE_PATH = "/conta/perfil";
+
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
@@ -268,6 +271,17 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (isPasswordRecoverySession() && location.pathname !== PASSWORD_RECOVERY_PATH) {
     return <Navigate to={PASSWORD_RECOVERY_PATH} replace />;
+  }
+
+  // Migração/cutover: GATE DURO de troca de senha. Quando o usuário está marcado com
+  // must_change_password (ex.: todos no cutover), bloqueia o app inteiro e força ir pra
+  // tela de perfil, que efetua a troca e LIMPA o flag (src/pages/conta/Perfil.tsx:109).
+  // O TemporaryPasswordNotice antigo só avisava (toast); este OBRIGA.
+  if (
+    user.user_metadata?.must_change_password === true &&
+    location.pathname !== FORCE_PASSWORD_CHANGE_PATH
+  ) {
+    return <Navigate to={FORCE_PASSWORD_CHANGE_PATH} replace />;
   }
 
   return <>{children}</>;
