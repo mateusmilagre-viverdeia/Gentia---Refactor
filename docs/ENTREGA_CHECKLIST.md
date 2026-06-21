@@ -18,7 +18,7 @@
 | c) Banco de Dados | 🟡 `BANCO_DADOS.md` (doc técnica + mapa de tabelas críticas); queries lentas reais no cutover | ~90% |
 | d) Backup e Recuperação | 🟡 `BACKUP_DR.md`: 7 backups/dia + WAL-G; RPO/RTO + DR + restore doc; PITR (decisão custo) e teste real no cutover | ~70% |
 | e) Infraestrutura e Escalabilidade | 🟡 `INFRA_ESCALA.md`: pooling + cache (impl.) + review + fallback; compute/slow-query no cutover | ~70% |
-| f) Otimização de LLMs | 🟢 `LLM_AUDIT` + `PLANO_EFICIENCIA` + custo; desacoplamento (flag) + **fallback** + **prompt caching (Claude, validado)** + parecer blindado; ativação direta/R$ no cutover | ~85% |
+| f) Otimização de LLMs | ✅ **Desacoplamento COMPLETO** (todas ~80 functions → Gemini/Claude/OpenAI direto via `aiFetch`/wrapper, **0 dependência do Lovable Gateway**) + `LLM_AUDIT`/`PLANO_EFICIENCIA`/custo + fallback + prompt caching + fixes (prompt_cache_key, velocidade, taxonomia). R$ real no cutover c/ volume | ~95% |
 | g) Entregáveis (artefatos) | ✅ 11/12 (relatório, banco, RLS, isolamento, functions, dashboards, backup, runbook, LLM, guia, handoff); falta só a **reunião** | ~90% |
 
 ---
@@ -81,7 +81,7 @@
 - [x] Recomendação de modelo/provedor por tipo de tarefa (incl. **Claude**) → §5
 - [🟡] Comparativo custo atual × projetado → §5.1 (tabela Gemini×direto×Claude em R$/mês e R$/ano; premissas documentadas; travar volume/markup no cutover)
 - [x] Fallback p/ falhas de LLM → §7 + **implementado** no wrapper (`callLLMTool` aceita `fallbackModels[]`: primário→cadeia; commit `24fc9cb`)
-- [🟡] **Desacoplar Lovable Gateway → provedores diretos** → §6: wrapper roteável + **flag `LLM_DIRECT_PROVIDERS` ATIVADA (2026-06-12, OK do dono)** — 4 functions (parecer cultura/técnica, match CV, reprocess) rodando **Gemini/Claude DIRETO** (validado com os modelos reais: gemini-3-flash-preview, gemini-2.5-flash, claude-haiku-4-5). ⏳ Restam ~77 functions com fetch INLINE ao gateway (`LOVABLE_API_KEY`, ausente no destino) → desacoplar (trabalho grande) ou bridge com a key do Lovable p/ o teste.
+- [x] **Desacoplar Lovable Gateway → provedores diretos** → ✅ **COMPLETO (2026-06-15/21)**. Helper `_shared/ai-gateway.ts` (`aiFetch`, drop-in) roteia por `model` → **Gemini/OpenAI/Claude DIRETO**; wrapper `llm-tool-call.ts` força direto (gateway removido). **Todas as ~80 functions** convertidas (incl. o 2º endpoint `api.lovable.dev/ai`); **0 fetch ao gateway morto**. Fixes do desacople, validados ao vivo: (a) **`prompt_cache_key`** não vai p/ Google (HTTP 400 zerava o parecer técnico — comprovado na sessão do cliente; corrigido); (b) **velocidade** `reasoning_effort=none` (Gemini Flash 3-4×); (c) **taxonomia** de agente {adaptive,disc,structured}; (d) **fallbackModels** no parecer; (e) **email** desacoplado do Lovable → Resend direto (`send-outreach-email`, `process-email-queue` ✅; `auth-email-hook` precisa de config do Supabase Auth Hook + teste — passo conjunto). ⏳ R$ real no cutover (volume).
 
 ## g) Entregáveis (artefatos para aceite)
 - [x] Relatório de auditoria antes/depois → `SECURITY_AUDIT.md` + `PERFORMANCE_AUDIT.md`, consolidado em `HANDOFF.md §2`
@@ -106,11 +106,18 @@ Novas funcionalidades · suporte pós-garantia · redesign UX/UI · novos módul
 
 ---
 
-## ⏳ Pendências consolidadas para o CUTOVER (dados/secrets reais)
-1. Reapontar 6 crons + agendar `ops-health-monitor` (hoje apontam p/ origem Lovable); rotacionar `CRON_SECRET`.
-2. Secrets faltantes do cliente (ver `SECRETS_INVENTORY.md` — 14 não-opcionais de hunting/WhatsApp/enriquecimento).
-3. Queries lentas reais + `unused_index` (com `pg_stat_statements` e tráfego).
-4. Front: ✅ feito (marketplace `07d1ff8`, careers `a69ff69`, **portal `b78a0a3`**). Resta só a **chrome-extension** → destino (republicação).
-5. Migração de dados + storage + Auth origem→destino.
+## ⏳ Pendências consolidadas para o CUTOVER / GO-LIVE (dados/secrets reais)
+**Gate nº1 (do cliente):** 🔑 **connection string do banco de ORIGEM** (Lovable Cloud `axumduklmiiptumdsgtu`) → migração FINAL de dados+storage+Auth origem→destino. **Sem isso, virar o domínio = perder dados gerados desde a importação.**
+1. **Dados:** migração final origem→destino (depende do gate nº1) + storage + Auth.
+2. **Secrets faltantes** no destino: `ZAPI_*` (WhatsApp), `HUNTER_API_KEY`, `GITHUB_TOKEN` (+ confirmar `STRIPE_SECRET_KEY`=live, `SITE_URL`/`PUBLIC_SITE_URL`). Ver `SECRETS_INVENTORY.md`.
+3. **Domínio:** no Lovable → build verde + `VITE_PUBLIC_ORIGIN=https://gentia.tech` + conectar `gentia.tech` ao projeto + DNS. (Front canônico já é configurável: commit `f60bc55`.)
+4. **`auth-email-hook`:** sair do Lovable → configurar **Supabase Auth "Send Email Hook"** + `SEND_EMAIL_HOOK_SECRET` + testar recuperação/convite (código a finalizar nesse passo).
+5. **Crons:** reapontar 6 crons + agendar `ops-health-monitor`; rotacionar `CRON_SECRET` (hoje em valor de teste).
+6. **Performance:** queries lentas reais + `unused_index` (`pg_stat_statements` + tráfego).
+7. **Busca semântica:** re-embed (vetores `text-embedding-004` → `gemini-embedding-001`).
+8. **PITR** (decisão de custo do cliente, ~US$100/mês) + teste de restore real em clone.
+9. Front: ✅ marketplace/careers/portal/canônico feitos. Resta só a **chrome-extension** → destino (republicação).
 
-*Última atualização: 2026-06-06.*
+> Runbook executável da virada: `docs/RUNBOOK_CUTOVER.md`.
+
+*Última atualização: 2026-06-21 — desacoplamento LLM **completo** (todas as functions + email send-outreach/queue → Resend); fixes de parecer (`prompt_cache_key`), velocidade, taxonomia e link canônico no ar. Falta: `auth-email-hook` (config Auth), secrets do cliente, e o gate de dados (connection string da origem) p/ a virada.*
