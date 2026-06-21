@@ -1,7 +1,6 @@
 import * as React from 'npm:react@18.3.1'
 import { renderAsync } from 'npm:@react-email/components@0.0.22'
-import { parseEmailWebhookPayload } from 'npm:@lovable.dev/email-js'
-import { WebhookError, verifyWebhookRequest } from 'npm:@lovable.dev/webhooks-js'
+import { Webhook } from 'https://esm.sh/standardwebhooks@1.0.0'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { SignupEmail } from '../_shared/email-templates/signup.tsx'
 import { InviteEmail } from '../_shared/email-templates/invite.tsx'
@@ -137,82 +136,51 @@ async function handlePreview(req: Request): Promise<Response> {
 
 // Webhook handler - verifies signature and sends email
 async function handleWebhook(req: Request): Promise<Response> {
-  const apiKey = Deno.env.get('LOVABLE_API_KEY')
-
-  if (!apiKey) {
-    console.error('LOVABLE_API_KEY not configured')
+  // Desacoplado do Lovable: verifica o webhook nativo do Supabase Auth ("Send Email Hook")
+  // com standardwebhooks + SEND_EMAIL_HOOK_SECRET (formato "v1,whsec_..." gerado no painel).
+  const hookSecret = Deno.env.get('SEND_EMAIL_HOOK_SECRET')
+  if (!hookSecret) {
+    console.error('SEND_EMAIL_HOOK_SECRET not configured')
     return new Response(
       JSON.stringify({ error: 'Server configuration error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 
-  // Verify signature + timestamp, then parse payload.
-  let payload: any
-  let run_id = ''
-  try {
-    const verified = await verifyWebhookRequest({
-      req,
-      secret: apiKey,
-      parser: parseEmailWebhookPayload,
-    })
-    payload = verified.payload
-    run_id = payload.run_id
-  } catch (error) {
-    if (error instanceof WebhookError) {
-      switch (error.code) {
-        case 'invalid_signature':
-        case 'missing_timestamp':
-        case 'invalid_timestamp':
-        case 'stale_timestamp':
-          console.error('Invalid webhook signature', { error: error.message })
-          return new Response(JSON.stringify({ error: 'Invalid signature' }), {
-            status: 401,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          })
-        case 'invalid_payload':
-        case 'invalid_json':
-          console.error('Invalid webhook payload', { error: error.message })
-          return new Response(
-            JSON.stringify({ error: 'Invalid webhook payload' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          )
-      }
-    }
+  const rawBody = await req.text()
+  const headers = Object.fromEntries(req.headers)
+  const run_id = headers['webhook-id'] || crypto.randomUUID()
 
-    console.error('Webhook verification failed', { error })
+  let user: any
+  let email_data: any
+  try {
+    const wh = new Webhook(hookSecret.replace('v1,whsec_', ''))
+    const verified = wh.verify(rawBody, headers) as { user: any; email_data: any }
+    user = verified.user
+    email_data = verified.email_data
+  } catch (error) {
+    console.error('Invalid webhook signature/payload', {
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return new Response(JSON.stringify({ error: 'Invalid signature' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
+  if (!user || !email_data) {
+    console.error('Webhook payload missing user/email_data', { run_id })
     return new Response(
       JSON.stringify({ error: 'Invalid webhook payload' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 
-  if (!run_id) {
-    console.error('Webhook payload missing run_id')
-    return new Response(
-      JSON.stringify({ error: 'Invalid webhook payload' }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    )
-  }
-
-  if (payload.version !== '1') {
-    console.error('Unsupported payload version', { version: payload.version, run_id })
-    return new Response(
-      JSON.stringify({ error: `Unsupported payload version: ${payload.version}` }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    )
-  }
-
-  // The email action type is in payload.data.action_type (e.g., "signup", "recovery")
-  // payload.type is the hook event type ("auth")
-  const emailType = payload.data.action_type
-  const recipientEmail = normalizeEmail(payload.data.email)
+  // email_action_type nativo: signup, recovery, invite, magiclink, reauthentication,
+  // email_change (e variantes email_change_current/new -> mapeadas p/ 'email_change').
+  const rawAction = String(email_data.email_action_type || '')
+  const emailType = rawAction.startsWith('email_change') ? 'email_change' : rawAction
+  const recipientEmail = normalizeEmail(user.email)
   console.log('Received auth event', { emailType, email: recipientEmail, run_id })
 
   const EmailTemplate = EMAIL_TEMPLATES[emailType]
@@ -224,15 +192,22 @@ async function handleWebhook(req: Request): Promise<Response> {
     )
   }
 
-  // Build template props from payload.data (HookData structure)
+  // Monta a URL de confirmação a partir do payload NATIVO do Supabase (token_hash +
+  // verify endpoint do projeto). Antes o Lovable entregava a URL pronta (payload.data.url).
+  const verifyBase = (Deno.env.get('SUPABASE_URL') || email_data.site_url || `https://${ROOT_DOMAIN}`).replace(/\/$/, '')
+  const redirectTo = email_data.redirect_to || email_data.site_url || `https://${ROOT_DOMAIN}`
+  const confirmationUrl =
+    `${verifyBase}/auth/v1/verify?token=${email_data.token_hash}&type=${email_data.email_action_type}` +
+    `&redirect_to=${encodeURIComponent(redirectTo)}`
+
   const templateProps = {
     siteName: SITE_NAME,
     siteUrl: `https://${ROOT_DOMAIN}`,
-    recipient: payload.data.email,
-    confirmationUrl: payload.data.url,
-    token: payload.data.token,
-    email: payload.data.email,
-    newEmail: payload.data.new_email,
+    recipient: user.email,
+    confirmationUrl,
+    token: email_data.token,
+    email: user.email,
+    newEmail: user.new_email ?? email_data.new_email,
   }
 
   // Render React Email to HTML and plain text
