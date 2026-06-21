@@ -1,14 +1,16 @@
 # Auditoria e Otimização de LLMs — Gentia (Fase 1, Frente F)
 
 > Entregável do contrato (Cláusula 1.3 "f) Otimização de LLMs" + "g) Análise comparativa de LLMs com recomendação"). Ambiente: destino `tdyvuomybimgygjgvnrk`.
-> **Status:** inventário + recomendação + plano de desacoplamento prontos. Comparativo de custo com **premissas documentadas** (volume real só na produção Lovable → fechar no cutover). Reescrita do wrapper: **plano desenhado, não implementado** (decisão do dono).
+> **Status (2026-06-21):** inventário + recomendação prontos · comparativo de custo com **premissas documentadas** (volume/R$ real fecha no cutover) · **🟢 DESACOPLAMENTO DO LOVABLE GATEWAY = COMPLETO E IMPLEMENTADO** (não é mais "plano": todas as ~80 functions de IA chamam Gemini/Claude/OpenAI **direto**; 0 dependência do gateway). Inclui fixes validados ao vivo (§11). Resta só travar **R$ real** com a fatura no cutover.
 
 ---
 
-## 1. Como a IA funciona hoje
-- **Wrapper central:** `supabase/functions/_shared/llm-tool-call.ts` — formato **OpenAI-compatible** (`/v1/chat/completions` + tool-calling), modelos nomeados `provider/model`. Hoje aponta **tudo** para o **Lovable AI Gateway** (`ai.gateway.lovable.dev`, `LOVABLE_API_KEY`).
-- **Roteamento:** ~85 chamadas via Lovable Gateway (chat+embeddings); voz/transcrição direto na OpenAI.
-- **Config sem deploy:** `platform_ai_model_config` (troca o modelo por serviço) + `feature_llm_mapping` (feature→modelo+tokens médios). **Trocar de provedor não exige editar 85 functions** — é no wrapper + config.
+## 1. Como a IA funciona hoje (pós-desacoplamento)
+- **Dois caminhos, ambos DIRETOS ao provedor (sem Lovable Gateway):**
+  - `_shared/ai-gateway.ts` (`aiFetch`, drop-in do fetch) — usado pelas ~77 functions que faziam fetch inline; roteia pelo `model` do body → Gemini/OpenAI/Claude e devolve resposta OpenAI-compatible.
+  - `_shared/llm-tool-call.ts` (`callLLMTool`, tool-calling/saída estruturada) — usado pelos pareceres/match; força direto quando `LOVABLE_API_KEY` ausente.
+- **Roteamento por prefixo do modelo:** `claude*`→Anthropic (Messages API nativa), `gpt*/openai*`→OpenAI, `gemini*/google*`→Google (endpoint OpenAI-compat); voz/transcrição já era direto na OpenAI.
+- **Config sem deploy:** `platform_ai_model_config` (troca modelo por serviço) + `feature_llm_mapping` (feature→modelo+tokens médios). Trocar modelo/provedor **não** exige editar as functions.
 - **Billing/observabilidade:** `ai_execution_logs`, `v_ops_ai_by_model/by_function` (Frente B), `ai_cost_baselines`, `llm_cost_monthly_snapshots`.
 
 ## 2. Inventário — finalidade × modelo × tokens (real, do `feature_llm_mapping`)
@@ -84,8 +86,12 @@ Custo/chamada com Claude (preços oficiais, tokens do mapping):
 - **Recomendação: C** (com opção de subir pareceres para Sonnet após A/B de qualidade).
 - **Travar no cutover:** volume real (`ai_execution_logs`), % de markup (fatura Lovable), preço público vigente do Gemini.
 
-## 6. Desacoplamento do Lovable Gateway — ✅ IMPLEMENTADO (atrás de flag, default OFF)
-Implementado em `_shared/llm-tool-call.ts` (commit `302f927`): `callLLMTool` roteia por prefixo do modelo quando `LLM_DIRECT_PROVIDERS=true`; com a flag **OFF (padrão)** segue 100% no gateway (**zero risco**). Reusa o cliente Anthropic **nativo** (`callClaudeWithTool`, Messages API — não shim). Só **4 functions** usam o wrapper (raio pequeno); todas redeployadas e com bundle validado. Lógica:
+## 6. Desacoplamento do Lovable Gateway — ✅ COMPLETO (todas as functions, gateway removido)
+**Evolução:** começou atrás de flag em 4 functions (commit `302f927`, 12/jun) e foi **concluído** (15–21/jun). Hoje **todas as ~80 functions de IA chamam o provedor direto** e o gateway **não é mais usado** (`LOVABLE_API_KEY` removido do destino). Dois mecanismos, ambos diretos:
+- **`_shared/ai-gateway.ts` (`aiFetch`)** — drop-in do `fetch`: as ~77 functions que faziam fetch inline ao gateway agora usam `aiFetch`, que roteia pelo `model` → Gemini/OpenAI/Claude e devolve resposta **OpenAI-compatible** (o parsing existente continua válido). O 2º endpoint Lovable (`api.lovable.dev/ai`) também foi convertido.
+- **`_shared/llm-tool-call.ts` (`callLLMTool`)** — pareceres/match com tool-calling: força direto quando `LOVABLE_API_KEY` ausente; cliente Anthropic **nativo** (Messages API, não shim).
+
+Roteamento por prefixo do modelo (implementado):
 
 ```ts
 // pseudo — resolver endpoint+key por prefixo do modelo
@@ -102,12 +108,12 @@ function route(model: string) {
   return { url: LOVABLE_AI_URL, key: env("LOVABLE_API_KEY") };
 }
 ```
-- **Ativação (cutover), em ordem:** (1) popular a secret **`GEMINI_API_KEY`** (hoje placeholder `PENDING_...`); (2) `LLM_DIRECT_PROVIDERS=true`; (3) redeploy das 4 functions; (4) validar feature a feature. Enquanto a key do Gemini for placeholder, o Gemini cai no gateway automaticamente (fallback gracioso) — então dá pra ativar Claude/OpenAI direto antes do Gemini, se quiser migração incremental. `platform_ai_model_config` segue trocando modelo sem deploy.
+- **Estado atual (não é mais "ativação futura"):** `GEMINI_API_KEY` / `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` populadas no destino; `LOVABLE_API_KEY` **removido** → 100% direto. As ~80 functions deployadas e **validadas ao vivo** (entrevistas de voz + pareceres rodando no destino). `platform_ai_model_config` segue trocando modelo sem deploy.
 - **Anthropic:** já temos `ANTHROPIC_API_KEY` (salva) + `_shared/anthropic-client.ts`. Tool-calling do Claude mapeia para o mesmo contrato (`tools`/`tool_choice`).
 - Remove a dependência de `LOVABLE_API_KEY` (90 functions) — item de maior risco da migração (CLAUDE.md §6).
 
-## 7. Fallback entre modelos/provedores (contrato §f)
-Estender o wrapper para, em **timeout / JSON quebrado / 5xx / indisponibilidade / custo anormal**, cair para um modelo alternativo na ordem definida por feature. Ex.: `sonnet-4-6 → haiku-4-5 → gemini-2.5-flash`. Já existe base: retries em 429/5xx + parse defensivo de JSON. Registrar cada fallback em `ai_execution_logs.status='fallback'` (já suportado).
+## 7. Fallback entre modelos/provedores (contrato §f) — ✅ IMPLEMENTADO
+O wrapper `callLLMTool` aceita `fallbackModels[]` (commit `24fc9cb`): tenta o primário e, em erro **não-transiente**, percorre a cadeia (cross-provider). Cada modelo tem retry próprio em 429/5xx + parse defensivo de JSON. Em uso real: o parecer técnico usa `fallbackModels: ["claude-sonnet-4-5"]` (commit `31340f7`) — um 400 isolado **não zera mais** a avaliação. Estender as cadeias por feature onde fizer sentido.
 
 ## 8. Reduções de custo adicionais
 - **Prompt caching:** prefixos estáveis (system + instruções + contexto da vaga) antes do conteúdo variável → leituras a ~0,1× (ver `shared/prompt-caching`). Útil em ranking/screening de muitos candidatos da mesma vaga (já há `cacheKey`/`prompt_cache_key` no wrapper).
@@ -117,9 +123,10 @@ Estender o wrapper para, em **timeout / JSON quebrado / 5xx / indisponibilidade 
 
 ## 9. Pendências para o cutover
 - Confirmar **preço público vigente** (Gemini/OpenAI/Perplexity) + **% de markup do Lovable** (fatura) → fechar o comparativo R$/mês com volume real.
-- Implementar a reescrita do wrapper (§6) + testar feature a feature com as keys diretas.
-- Definir as cadeias de fallback por feature (§7).
-- A/B de qualidade (Gemini×Claude) nos pareceres antes de virar 100%.
+- ~~Reescrita do wrapper + testar feature a feature~~ → **FEITO** (§6 e §11, validado ao vivo).
+- ~~Definir cadeias de fallback~~ → base feita (§7); estender por feature se quiser.
+- A/B de qualidade (Gemini×Claude) nos pareceres antes de subir pra Sonnet (opcional).
+- **Re-embed** da busca semântica (o modelo de embedding mudou — §11).
 
 ## 10. Validação com dados reais (2026-06-06)
 Cliente carregou dados reais no destino (59 empresas, 181 candidatos, 124 candidaturas, 193 usuários, **113 logs de IA**, 73 MB):
@@ -127,3 +134,14 @@ Cliente carregou dados reais no destino (59 empresas, 181 candidatos, 124 candid
 - **🔴→✅ Confiabilidade do parecer:** os logs revelaram que `culture-interview-complete` falhou **~62%** no período em que usou modelos **"pro"** (gemini-2.5-pro **0%** ok; gemini-3-pro-preview ~20%) com erro "no tool_call"; os **flash funcionam 100%**. **Já mitigado em produção** (`current_model`=gemini-3-flash-preview desde ~25/mai; últimas 10 execuções 100% ok) e **blindado contra regressão** (commit `1ae8101`: default+fallback → flash; `default_model` da config → flash).
 - **Volume/custo:** logs de IA poucos e concentrados em entrevistas (113 em 24 dias) → volume logado baixo (ou nem toda chamada é instrumentada). **A economia em R$ depende da fatura real do Lovable** — o maior ganho neste dataset é **confiabilidade + qualidade**, não custo absoluto.
 - **Recomendação reforçada:** Claude nos pareceres não é só qualidade — é a opção **mais confiável** de tool-calling (os modelos "pro" do Google quebram no schema grande). No cutover, Claude entra como primary/fallback cross-provider do parecer.
+
+## 11. Execução do desacoplamento — fixes validados AO VIVO (15–21/jun/2026)
+O desacople (sair do gateway → direto) expôs e corrigiu bugs reais, todos comprovados em produção no destino:
+- **🔴 `prompt_cache_key` (HTTP 400 no Gemini):** o wrapper enviava esse campo (exclusivo OpenAI) ao endpoint OpenAI-compat do Google, que rejeita campos desconhecidos → o **parecer técnico zerava** (`overall_score=0`, "Erro na avaliação automática") — **comprovado na sessão de teste do próprio cliente**. O gateway Lovable tolerava o campo; o desacople expôs. Corrigido (commit `31340f7`): só envia p/ OpenAI direto + `fallbackModels` (Claude) de rede de segurança. Reprocessamento da sessão → `status=success`.
+- **⚡ Velocidade (thinking do Gemini):** os modelos Flash fazem "thinking" por padrão na API direta (o gateway rodava sem) → 3–4× mais lento (parecer de entrevista 9s→2s). Corrigido com `reasoning_effort="none"` p/ Flash não-pro (commit `f99acf3`).
+- **🏷️ Taxonomia de agente:** filtros usavam valores inexistentes (`technical`/`cultural`) em `recruitment_agents.type` (real: `adaptive`=técnico, `disc`=comportamental, `structured`=cultural) → agente técnico pegava prompt errado. Alinhado em **todas** as functions (commits `5328c3a`/`b8b249e`).
+- **🔢 Embeddings:** `text-embedding-004` foi **descontinuado** na API Gemini → migrado p/ `gemini-embedding-001`@768 (commit `e6ba54b`). ⚠️ Vetores antigos são de outro modelo → **re-embed** necessário no cutover (senão a busca semântica fica inconsistente).
+- **🔁 Resiliência:** retry (429/5xx) centralizado no `aiFetch`.
+- **✉️ Email (parte do desacople do Lovable, fora de LLM):** `send-outreach-email`, `process-email-queue` e `auth-email-hook` migrados p/ **Resend direto** (auth via **Supabase Send Email Hook nativo** + standardwebhooks). Testado: recuperação de senha enviada (`status=sent`, provider=resend).
+
+> **Resultado:** dependência de código do Lovable (gateway LLM + endpoint `/ai` + conector de email) = **ZERO**. O que resta pro cutover é configuração (keys reais, fatura p/ fechar R$, re-embed), não código.
