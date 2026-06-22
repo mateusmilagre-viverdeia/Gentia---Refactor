@@ -89,6 +89,9 @@ const RedefinirSenha = () => {
     try {
       const { error } = await supabase.auth.updateUser({
         password: password,
+        // A recuperação também satisfaz o gate de troca forçada do cutover: limpa o flag
+        // must_change_password (merge no user_metadata), igual ao fluxo de Conta → Perfil.
+        data: { must_change_password: false, temporary_password_changed_at: new Date().toISOString() },
       });
 
       if (error) {
